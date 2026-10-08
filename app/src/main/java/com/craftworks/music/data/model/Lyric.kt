@@ -95,6 +95,9 @@ data class LrcLibLyrics(
     val plainLyrics: String? = "",
     val syncedLyrics: String? = "",
     val lyricsfile: String? = "",
+    val trackName: String? = null,
+    val albumName: String? = null,
+    val duration: Double? = null,
 )
 
 // NetEase Lyrics
