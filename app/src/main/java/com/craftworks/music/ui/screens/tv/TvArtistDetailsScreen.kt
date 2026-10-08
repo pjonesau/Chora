@@ -38,6 +38,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -50,6 +55,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
@@ -74,11 +80,15 @@ import com.craftworks.music.ui.elements.tv.TvAlbumCard
 import com.craftworks.music.ui.elements.tv.TvArtistCard
 import com.craftworks.music.ui.elements.tv.rememberTvFocusRestoreState
 import com.craftworks.music.ui.viewmodels.ArtistsScreenViewModel
+import com.craftworks.music.utils.bleedHorizontal
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 /** How much of the biography shows on this screen before the More button takes over. */
 private const val BiographyPreviewMaxLines = 4
+
+/** Key the album cards are tracked under by the focus restore state. */
+private fun albumFocusKey(album: MediaItem) = "album|" + (album.mediaMetadata.id ?: album.mediaId)
 
 @Composable
 @Preview
@@ -105,6 +115,9 @@ fun TvArtistDetailsScreen(
     val appearancesByYearDesc = remember(artistAppearanceAlbums) {
         artistAppearanceAlbums.newestFirst()
     }
+    val similarArtists = artist?.similarArtists.orEmpty()
+    val showSimilarArtists = similarArtists.isNotEmpty() &&
+            artist?.getProvider()?.featureFlags?.contains(ProviderFeature.SIMILAR_SONGS) == true
 
     val focusRestore = rememberTvFocusRestoreState()
     var showBiographyDialog by remember { mutableStateOf(false) }
@@ -131,6 +144,21 @@ fun TvArtistDetailsScreen(
         val context = LocalContext.current
         var radioLoading by remember { mutableStateOf(false) }
 
+        // The card D-pad Down from the action buttons belongs on: the first card of the first
+        // non-empty section below the header. Down restores a remembered album first, so this is
+        // only where a fresh visit lands.
+        val firstCardKey = when {
+            albumsByYearDesc.isNotEmpty() -> albumFocusKey(albumsByYearDesc.first())
+            appearancesByYearDesc.isNotEmpty() -> albumFocusKey(appearancesByYearDesc.first())
+            showSimilarArtists -> "similar|" + similarArtists.first().id
+            else -> null
+        }
+        val firstCardRequester = remember { FocusRequester() }
+
+        /* The requester Down lands on, alongside the card's focus restore modifier. */
+        fun Modifier.focusFirstCardIf(key: String): Modifier =
+            if (key == firstCardKey) this.focusRequester(firstCardRequester) else this
+
         LaunchedEffect(Unit) {
             focusRestore.restore(playRequester)
         }
@@ -146,7 +174,21 @@ fun TvArtistDetailsScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .focusGroup(),
+                        .focusGroup()
+                        .onKeyEvent { keyEvent ->
+                            // Down belongs on the first album, or the album that had focus last,
+                            // rather than on whichever card the focus search finds under the
+                            // button being left behind.
+                            if (keyEvent.type == KeyEventType.KeyDown &&
+                                keyEvent.key == Key.DirectionDown &&
+                                firstCardKey != null
+                            ) {
+                                coroutineScope.launch {
+                                    focusRestore.restore(firstCardRequester, keyPrefix = "album|")
+                                }
+                                true
+                            } else false
+                        },
                     horizontalArrangement = Arrangement.spacedBy(24.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -324,47 +366,6 @@ fun TvArtistDetailsScreen(
                 }
             }
 
-            /* Artists the provider considers similar, as a row rather than grid items so a long
-               list cannot push the discography off the screen. Fetched with the biography. */
-            val similarArtists = artist?.similarArtists.orEmpty()
-            if (similarArtists.isNotEmpty() &&
-                artist?.getProvider()?.featureFlags?.contains(ProviderFeature.SIMILAR_SONGS) == true
-            ) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Column(Modifier.focusGroup()) {
-                        Text(
-                            text = stringResource(R.string.artist_details_similar_artists),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                        LazyRow(
-                            modifier = Modifier.focusGroup(),
-                            horizontalArrangement = Arrangement.spacedBy(24.dp),
-                            contentPadding = PaddingValues(vertical = 8.dp)
-                        ) {
-                            items(similarArtists, key = { it.id }) { similar ->
-                                TvArtistCard(
-                                    artist = similar,
-                                    modifier = focusRestore.focusModifier("similar|" + similar.id),
-                                    onClick = {
-                                        navHostController.navigate(
-                                            Screen.ArtistDetails(
-                                                similar.id,
-                                                similar.imageUrl ?: similar.imageId?.let { imageId ->
-                                                    similar.getProvider()?.getImageUrl(imageId)
-                                                } ?: ""
-                                            )
-                                        )
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
             /* Discography. The year sits on each card where the artist name would be, so the
                albums run together in one grid instead of a row per year. */
             if (albumsByYearDesc.isNotEmpty()) {
@@ -379,9 +380,10 @@ fun TvArtistDetailsScreen(
                     )
                 }
                 items(albumsByYearDesc) { album ->
+                    val key = albumFocusKey(album)
                     TvAlbumCard(
                         album = album,
-                        modifier = focusRestore.focusModifier("album|" + (album.mediaMetadata.id ?: album.mediaId)),
+                        modifier = focusRestore.focusModifier(key).focusFirstCardIf(key),
                         onClick = {
                             navHostController.navigate(Screen.AlbumDetails(album.mediaMetadata.id?:"", album.mediaMetadata.artworkUri.toString())) {
                                 launchSingleTop = true
@@ -406,15 +408,61 @@ fun TvArtistDetailsScreen(
                     )
                 }
                 items(appearancesByYearDesc) { album ->
+                    val key = albumFocusKey(album)
                     TvAlbumCard(
                         album = album,
-                        modifier = focusRestore.focusModifier("album|" + (album.mediaMetadata.id ?: album.mediaId)),
+                        modifier = focusRestore.focusModifier(key).focusFirstCardIf(key),
                         onClick = {
                             navHostController.navigate(Screen.AlbumDetails(album.mediaMetadata.id?:"", album.mediaMetadata.artworkUri.toString())) {
                                 launchSingleTop = true
                             }
                         },
                     )
+                }
+            }
+
+            /* Artists the provider considers similar. Last, so the discography keeps the top of
+               the page, and a row rather than grid items so a long list stays out of the way.
+               Fetched with the biography. */
+            if (showSimilarArtists) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Column(Modifier.focusGroup()) {
+                        Text(
+                            text = stringResource(R.string.artist_details_similar_artists),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                        LazyRow(
+                            // A lazy row clips on its own axis, and the grid item is only as wide
+                            // as the padded content area, so without the bleed the focused first
+                            // and last cards lose an edge to that clip. The bleed widens the row
+                            // by the screen gutter each side; the content padding keeps the cards
+                            // aligned with the album columns.
+                            modifier = Modifier.focusGroup().bleedHorizontal(48.dp),
+                            horizontalArrangement = Arrangement.spacedBy(24.dp),
+                            contentPadding = PaddingValues(horizontal = 48.dp, vertical = 8.dp)
+                        ) {
+                            items(similarArtists, key = { it.id }) { similar ->
+                                val key = "similar|" + similar.id
+                                TvArtistCard(
+                                    artist = similar,
+                                    modifier = focusRestore.focusModifier(key).focusFirstCardIf(key),
+                                    onClick = {
+                                        navHostController.navigate(
+                                            Screen.ArtistDetails(
+                                                similar.id,
+                                                similar.imageUrl ?: similar.imageId?.let { imageId ->
+                                                    similar.getProvider()?.getImageUrl(imageId)
+                                                } ?: ""
+                                            )
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

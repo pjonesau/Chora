@@ -96,10 +96,12 @@ class TvFocusRestoreState internal constructor(
     /**
      * Puts focus back on the remembered item, waiting briefly for it to appear. Falls back to
      * [fallback], which should focus the first item of the list, when nothing was remembered or
-     * the item is gone.
+     * the item is gone. [keyPrefix] restricts which remembered items count - a caller that wants
+     * one kind of item (an album rather than a similar artist, say) ignores the rest.
      */
-    suspend fun restore(fallback: FocusRequester) {
+    suspend fun restore(fallback: FocusRequester, keyPrefix: String? = null) {
         val key = focusedItemKeyState.value
+            ?.takeIf { keyPrefix == null || it.startsWith(keyPrefix) }
         if (key == null) {
             // Nothing to restore. The list may still be loading when the screen appears, so wait
             // for its first item before falling back to it.
