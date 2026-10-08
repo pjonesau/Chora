@@ -21,7 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -40,11 +39,13 @@ import androidx.tv.material3.Text
 import com.craftworks.music.R
 import com.craftworks.music.data.model.ProviderType
 import com.craftworks.music.data.model.Screen
+import com.craftworks.music.data.model.id
 import com.craftworks.music.data.model.providerType
 import com.craftworks.music.player.SongHelper
 import com.craftworks.music.ui.elements.dialogs.tv.AddRadioDialog
 import com.craftworks.music.ui.elements.dialogs.tv.ModifyRadioDialog
 import com.craftworks.music.ui.elements.tv.TvRadioCard
+import com.craftworks.music.ui.elements.tv.rememberTvFocusRestoreState
 import com.craftworks.music.ui.viewmodels.RadioScreenViewModel
 import kotlinx.coroutines.launch
 
@@ -63,9 +64,10 @@ fun TvRadioScreen(
     val radios by viewModel.radioStations.collectAsStateWithLifecycle()
 
     val focusRequester = remember { FocusRequester() }
+    val focusRestore = rememberTvFocusRestoreState()
 
-    LaunchedEffect(Unit, radios) {
-        focusRequester.requestFocus()
+    LaunchedEffect(Unit) {
+        focusRestore.restore(focusRequester)
     }
 
     LazyVerticalGrid(
@@ -73,8 +75,7 @@ fun TvRadioScreen(
         modifier = Modifier
             .fillMaxSize()
             .focusGroup()
-            .focusRequester(focusRequester)
-            .focusRestorer(focusRequester),
+            .focusRequester(focusRequester),
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -82,6 +83,7 @@ fun TvRadioScreen(
         items(radios) { radio ->
             TvRadioCard (
                 radio = radio,
+                modifier = focusRestore.focusModifier(radio.mediaMetadata.id ?: radio.mediaId),
                 onClick = {
                     coroutineScope.launch {
                         SongHelper.play(

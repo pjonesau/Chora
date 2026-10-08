@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -57,7 +59,10 @@ import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import androidx.media3.ui.compose.state.rememberPreviousButtonState
 import androidx.media3.ui.compose.state.rememberRepeatButtonState
 import androidx.media3.ui.compose.state.rememberShuffleButtonState
+import androidx.tv.material3.Border
 import androidx.tv.material3.Button
+import androidx.tv.material3.ButtonBorder
+import androidx.tv.material3.ButtonColors
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Icon
 import androidx.tv.material3.IconButton
@@ -351,9 +356,8 @@ fun ShuffleButton(player: Player, modifier: Modifier = Modifier) {
         onClick = state::onClick,
         modifier = modifier,
         enabled = state.isEnabled,
-        border = if (state.shuffleOn) IconButtonDefaults.border() else OutlinedIconButtonDefaults.border(),
-        colors = if (state.shuffleOn) IconButtonDefaults.colors() else OutlinedIconButtonDefaults.colors(),
-        scale = if (state.shuffleOn) IconButtonDefaults.scale() else OutlinedIconButtonDefaults.scale(),
+        border = toggleButtonBorder(state.shuffleOn),
+        colors = toggleButtonColors(state.shuffleOn),
     ) {
         Icon(
             imageVector = ImageVector.vectorResource(R.drawable.round_shuffle_28),
@@ -372,9 +376,8 @@ fun RepeatButton(player: Player, modifier: Modifier = Modifier) {
         onClick = state::onClick,
         modifier = modifier,
         enabled = state.isEnabled,
-        border = if (state.repeatModeState == Player.REPEAT_MODE_OFF) OutlinedIconButtonDefaults.border() else IconButtonDefaults.border(),
-        colors = if (state.repeatModeState == Player.REPEAT_MODE_OFF) OutlinedIconButtonDefaults.colors() else IconButtonDefaults.colors(),
-        scale = if (state.repeatModeState == Player.REPEAT_MODE_OFF) OutlinedIconButtonDefaults.scale() else IconButtonDefaults.scale(),
+        border = toggleButtonBorder(state.repeatModeState != Player.REPEAT_MODE_OFF),
+        colors = toggleButtonColors(state.repeatModeState != Player.REPEAT_MODE_OFF),
     ) {
         Icon(
             imageVector = icon,
@@ -383,6 +386,39 @@ fun RepeatButton(player: Player, modifier: Modifier = Modifier) {
         )
     }
 }
+
+/**
+ * Colours for the toggle buttons (shuffle, repeat). Filling in the button was too subtle to be
+ * read from the couch, so while a toggle is on its icon and border are drawn in the theme's
+ * primary colour instead, and the focused look fills the button with that colour.
+ */
+@Composable
+private fun toggleButtonColors(on: Boolean): ButtonColors =
+    if (on) {
+        IconButtonDefaults.colors(
+            containerColor = androidx.tv.material3.MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
+            contentColor = androidx.tv.material3.MaterialTheme.colorScheme.primary,
+            focusedContainerColor = androidx.tv.material3.MaterialTheme.colorScheme.primary,
+            focusedContentColor = androidx.tv.material3.MaterialTheme.colorScheme.onPrimary,
+        )
+    } else {
+        OutlinedIconButtonDefaults.colors(
+            contentColor = androidx.tv.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+
+@Composable
+private fun toggleButtonBorder(on: Boolean): ButtonBorder =
+    if (on) {
+        IconButtonDefaults.border(
+            border = Border(
+                border = BorderStroke(2.dp, androidx.tv.material3.MaterialTheme.colorScheme.primary),
+                shape = CircleShape,
+            )
+        )
+    } else {
+        OutlinedIconButtonDefaults.border()
+    }
 
 @Composable
 private fun repeatModeIcon(repeatMode: @Player.RepeatMode Int): ImageVector {

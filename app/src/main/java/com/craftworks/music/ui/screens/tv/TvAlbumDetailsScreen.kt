@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -73,6 +74,7 @@ import com.craftworks.music.managers.settings.AppearanceSettingsManager
 import com.craftworks.music.player.SongHelper
 import com.craftworks.music.ui.elements.dialogs.tv.SongDialog
 import com.craftworks.music.ui.elements.tv.TvHorizontalSongCard
+import com.craftworks.music.ui.elements.tv.rememberTvFocusRestoreState
 import com.craftworks.music.ui.viewmodels.AlbumDetailsViewModel
 import com.craftworks.music.utils.StringUtils
 import kotlinx.coroutines.delay
@@ -97,6 +99,8 @@ fun TvAlbumDetails(
     var showSongDialog by remember { mutableStateOf(false) }
 
     var showLoading by remember { mutableStateOf(false) }
+
+    val focusRestore = rememberTvFocusRestoreState()
 
     LaunchedEffect(selectedAlbumId) {
         showLoading = false
@@ -127,6 +131,7 @@ fun TvAlbumDetails(
     ) {
         val coroutineScope = rememberCoroutineScope()
         val playRequester = remember { FocusRequester() }
+        val trackListRequester = remember { FocusRequester() }
 
         var isStarred by remember {
             mutableStateOf(
@@ -134,7 +139,7 @@ fun TvAlbumDetails(
             )
         }
 
-        LaunchedEffect(Unit) { playRequester.requestFocus() }
+        LaunchedEffect(Unit) { focusRestore.restore(playRequester) }
 
         Row(
             modifier = Modifier
@@ -275,7 +280,17 @@ fun TvAlbumDetails(
             LazyColumn(
                 modifier = Modifier
                     .weight(1f)
+                    .focusProperties {
+                        onEnter = {
+                            // Moving into the track list should start at the first track, or the
+                            // one that had focus last, instead of whichever track sits next to the
+                            // button being left behind.
+                            (focusRestore.focusRequesterOfFocusedItem() ?: trackListRequester)
+                                .requestFocus()
+                        }
+                    }
                     .focusGroup()
+                    .focusRequester(trackListRequester)
                     .fillMaxHeight(),
                 contentPadding = PaddingValues(vertical = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -301,6 +316,7 @@ fun TvAlbumDetails(
                         items(disc) { song ->
                             TvHorizontalSongCard (
                                 song = song,
+                                modifier = focusRestore.focusModifier(song.mediaMetadata.id ?: song.mediaId),
                                 showTrackNumber = showTrackNumbers,
                                 onClick = {
                                     coroutineScope.launch {
@@ -321,6 +337,7 @@ fun TvAlbumDetails(
                     items(songs) { song ->
                         TvHorizontalSongCard (
                             song = song,
+                            modifier = focusRestore.focusModifier(song.mediaMetadata.id ?: song.mediaId),
                             showTrackNumber = showTrackNumbers,
                             onClick = {
                                 coroutineScope.launch {

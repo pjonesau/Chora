@@ -61,6 +61,7 @@ import com.craftworks.music.data.model.Screen
 import com.craftworks.music.data.model.id
 import com.craftworks.music.player.SongHelper
 import com.craftworks.music.ui.elements.tv.TvAlbumCard
+import com.craftworks.music.ui.elements.tv.rememberTvFocusRestoreState
 import com.craftworks.music.ui.viewmodels.ArtistsScreenViewModel
 import kotlinx.coroutines.launch
 
@@ -80,6 +81,8 @@ fun TvArtistDetailsScreen(
     val showLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val artist = viewModel.selectedArtist.collectAsStateWithLifecycle().value
     val artistAlbums = viewModel.artistAlbums.collectAsStateWithLifecycle().value
+
+    val focusRestore = rememberTvFocusRestoreState()
 
     AnimatedVisibility(
         visible = showLoading || artist == null,
@@ -102,7 +105,7 @@ fun TvArtistDetailsScreen(
         val playRequester = remember { FocusRequester() }
 
         LaunchedEffect(Unit) {
-            playRequester.requestFocus()
+            focusRestore.restore(playRequester)
         }
         val groupedAlbums =
             artistAlbums.groupBy { it.mediaMetadata.recordingYear }
@@ -248,6 +251,7 @@ fun TvArtistDetailsScreen(
                 items(albumsInGroup) { album ->
                     TvAlbumCard(
                         album = album,
+                        modifier = focusRestore.focusModifier("album|" + (album.mediaMetadata.id ?: album.mediaId)),
                         onClick = {
                             navHostController.navigate(Screen.AlbumDetails(album.mediaMetadata.id?:"", album.mediaMetadata.artworkUri.toString())) {
                                 launchSingleTop = true

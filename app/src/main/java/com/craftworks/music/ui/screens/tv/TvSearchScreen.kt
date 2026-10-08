@@ -35,7 +35,6 @@ import androidx.compose.ui.focus.FocusRequester.Companion.FocusRequesterFactory.
 import androidx.compose.ui.focus.FocusRequester.Companion.FocusRequesterFactory.component2
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
@@ -59,6 +58,7 @@ import com.craftworks.music.ui.elements.dialogs.tv.SongDialog
 import com.craftworks.music.ui.elements.tv.TvAlbumCard
 import com.craftworks.music.ui.elements.tv.TvArtistCard
 import com.craftworks.music.ui.elements.tv.TvHorizontalSongCard
+import com.craftworks.music.ui.elements.tv.rememberTvFocusRestoreState
 import com.craftworks.music.ui.viewmodels.AlbumScreenViewModel
 import com.craftworks.music.ui.viewmodels.ArtistsScreenViewModel
 import com.craftworks.music.ui.viewmodels.SongsScreenViewModel
@@ -94,9 +94,10 @@ fun TvSearchScreen(
     val (searchFocusRequester, focusRequester) = remember { FocusRequester.createRefs() }
     val searchInteractionSource = remember { MutableInteractionSource() }
     val isSearchFocused by searchInteractionSource.collectIsFocusedAsState()
+    val focusRestore = rememberTvFocusRestoreState()
 
     LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+        focusRestore.restore(focusRequester)
     }
 
     val textFieldColors = TextFieldDefaults.colors(
@@ -118,8 +119,7 @@ fun TvSearchScreen(
         modifier = Modifier
             .fillMaxSize()
             .focusGroup()
-            .focusRequester(focusRequester)
-            .focusRestorer(focusRequester),
+            .focusRequester(focusRequester),
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -189,9 +189,7 @@ fun TvSearchScreen(
                 ) {
                     TvAlbumCard(
                         album = it,
-                        modifier = Modifier.onFocusChanged {
-                            focusRequester.saveFocusedChild()
-                        },
+                        modifier = focusRestore.focusModifier("album|" + (it.mediaMetadata.id ?: it.mediaId)),
                         onClick = {
                             navHostController.navigate(Screen.AlbumDetails(it.mediaMetadata.id?:"", it.mediaMetadata.artworkUri.toString())) {
                                 launchSingleTop = true
@@ -208,9 +206,7 @@ fun TvSearchScreen(
                 ) { index, song ->
                     TvHorizontalSongCard(
                         song = song,
-                        modifier = Modifier.onFocusChanged {
-                            focusRequester.saveFocusedChild()
-                        },
+                        modifier = focusRestore.focusModifier("song|" + (song.mediaMetadata.id ?: song.mediaId)),
                         onClick = {
                             coroutineScope.launch {
                                 SongHelper.play(songs, index, mediaController)
@@ -233,11 +229,8 @@ fun TvSearchScreen(
                 ) {
                     TvArtistCard(
                         artist = it,
-                        modifier = Modifier.onFocusChanged {
-                            focusRequester.saveFocusedChild()
-                        },
+                        modifier = focusRestore.focusModifier("artist|" + it.id),
                         onClick = {
-                            focusRequester.saveFocusedChild()
                             navHostController.navigate(Screen.ArtistDetails) {
                                 launchSingleTop = true
                             }

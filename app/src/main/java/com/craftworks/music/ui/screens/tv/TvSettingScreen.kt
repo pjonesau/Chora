@@ -12,8 +12,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -27,6 +25,7 @@ import androidx.tv.material3.Text
 import androidx.tv.material3.WideButton
 import com.craftworks.music.R
 import com.craftworks.music.data.model.Screen
+import com.craftworks.music.ui.elements.tv.rememberTvFocusRestoreState
 
 
 @Preview(
@@ -37,16 +36,16 @@ fun TvSettingScreen(
     navHostController: NavHostController = rememberNavController()
 ) {
     val focusRequester = remember { FocusRequester() }
+    val focusRestore = rememberTvFocusRestoreState()
 
     LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+        focusRestore.restore(focusRequester)
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 48.dp, vertical = 24.dp)
-            .focusRestorer(focusRequester)
             .focusRequester(focusRequester)
             .focusGroup(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -56,9 +55,7 @@ fun TvSettingScreen(
             R.drawable.s_a_palette,
             R.string.settings_appearance,
             navHostController,
-            Modifier.onFocusChanged {
-                focusRequester.saveFocusedChild()
-            }
+            focusRestore.focusModifier("appearance")
         )
 
         SettingsButton(
@@ -66,9 +63,7 @@ fun TvSettingScreen(
             R.drawable.s_m_media_providers,
             R.string.settings_media_providers,
             navHostController,
-            Modifier.onFocusChanged {
-                focusRequester.saveFocusedChild()
-            }
+            focusRestore.focusModifier("media_providers")
         )
 
         SettingsButton(
@@ -76,9 +71,7 @@ fun TvSettingScreen(
             R.drawable.s_m_playback,
             R.string.settings_playback,
             navHostController,
-            Modifier.onFocusChanged {
-                focusRequester.saveFocusedChild()
-            }
+            focusRestore.focusModifier("playback")
         )
     }
 }

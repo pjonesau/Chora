@@ -26,8 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -51,6 +49,7 @@ import com.craftworks.music.data.model.id
 import com.craftworks.music.managers.MediaProviderManager
 import com.craftworks.music.ui.elements.dialogs.tv.GenericListDialog
 import com.craftworks.music.ui.elements.tv.TvAlbumCard
+import com.craftworks.music.ui.elements.tv.rememberTvFocusRestoreState
 import com.craftworks.music.ui.viewmodels.AlbumScreenViewModel
 import kotlinx.coroutines.flow.filter
 
@@ -86,14 +85,14 @@ fun TvAlbumScreen(
 
     var showSortDialog by remember { mutableStateOf(false) }
 
-    val tabFocusRequester = remember { FocusRequester() }
     val focusRequester = remember { FocusRequester() }
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
+    val focusRestore = rememberTvFocusRestoreState()
 
     val gridState = rememberLazyGridState()
+
+    LaunchedEffect(Unit) {
+        focusRestore.restore(focusRequester)
+    }
 
     LaunchedEffect(albums.size) {
         if (albums.size % 50 != 0) return@LaunchedEffect
@@ -116,8 +115,7 @@ fun TvAlbumScreen(
         modifier = Modifier
             .fillMaxSize()
             .focusGroup()
-            .focusRequester(focusRequester)
-            .focusRestorer(focusRequester),
+            .focusRequester(focusRequester),
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 24.dp),
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(20.dp),
         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(24.dp),
@@ -177,9 +175,7 @@ fun TvAlbumScreen(
         items(albums) { album ->
             TvAlbumCard(
                 album = album,
-                modifier = Modifier.onFocusChanged {
-                    focusRequester.saveFocusedChild()
-                },
+                modifier = focusRestore.focusModifier(album.mediaMetadata.id ?: album.mediaId),
                 onClick = {
                     navHostController.navigate(
                         Screen.AlbumDetails(

@@ -26,8 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -54,6 +52,7 @@ import com.craftworks.music.player.SongHelper
 import com.craftworks.music.ui.elements.dialogs.tv.GenericListDialog
 import com.craftworks.music.ui.elements.dialogs.tv.SongDialog
 import com.craftworks.music.ui.elements.tv.TvHorizontalSongCard
+import com.craftworks.music.ui.elements.tv.rememberTvFocusRestoreState
 import com.craftworks.music.ui.viewmodels.SongsScreenViewModel
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
@@ -102,9 +101,10 @@ fun TvSongsScreen(
     val gridState = rememberLazyGridState()
 
     val focusRequester = remember { FocusRequester() }
+    val focusRestore = rememberTvFocusRestoreState()
 
     LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+        focusRestore.restore(focusRequester)
     }
 
         LaunchedEffect(songs.size) {
@@ -128,8 +128,7 @@ fun TvSongsScreen(
         modifier = Modifier
             .fillMaxSize()
             .focusGroup()
-            .focusRequester(focusRequester)
-            .focusRestorer(focusRequester),
+            .focusRequester(focusRequester),
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 24.dp),
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(20.dp),
         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(24.dp),
@@ -190,9 +189,7 @@ fun TvSongsScreen(
         itemsIndexed(songs) { index, song ->
             TvHorizontalSongCard(
                 song = song,
-                modifier = Modifier.onFocusChanged {
-                    focusRequester.saveFocusedChild()
-                },
+                modifier = focusRestore.focusModifier(song.mediaMetadata.id ?: song.mediaId),
                 onClick = {
                     coroutineScope.launch {
                         SongHelper.play(songs, index, mediaController)
