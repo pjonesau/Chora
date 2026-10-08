@@ -81,6 +81,7 @@ import com.craftworks.music.ui.screens.tv.TvSearchScreen
 import com.craftworks.music.ui.screens.tv.TvSettingScreen
 import com.craftworks.music.ui.screens.tv.TvSongsScreen
 import com.craftworks.music.ui.screens.tv.settings.TvS_AppearanceScreen
+import com.craftworks.music.ui.screens.tv.settings.TvS_LyricsScreen
 import com.craftworks.music.ui.screens.tv.settings.TvS_PlaybackScreen
 import com.craftworks.music.ui.screens.tv.settings.TvS_ProviderScreen
 import com.craftworks.music.ui.viewmodels.AlbumScreenViewModel
@@ -390,7 +391,7 @@ fun SetupNavGraph(
                     }
                 ) {
                     if (isTv)
-                        TvS_ProviderScreen()
+                        TvS_LyricsScreen()
                     else
                         S_LyricsProviderScreen(navController)
                 }
