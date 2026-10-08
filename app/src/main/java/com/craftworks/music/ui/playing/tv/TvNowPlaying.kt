@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,6 +55,7 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -64,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.tv.material3.IconButtonDefaults
@@ -90,10 +93,14 @@ import com.craftworks.music.ui.screens.tv.requestFocusOnFirstGainingVisibility
 import com.gigamole.composefadingedges.marqueeHorizontalFadingEdges
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
+
+/** How long a finished queue sits on screen before the TV returns Home. */
+private val FinishedQueueHomeDelay = 5000.milliseconds
 
 @kotlin.OptIn(FlowPreview::class)
 @Preview(device = "id:tv_1080p", showBackground = true, showSystemUi = true)
@@ -105,9 +112,16 @@ fun TvNowPlaying(
     onRefreshLyrics: () -> Unit = {},
     /** Null hides the similar-songs button; the preview and unwired callers pass nothing. */
     loadSimilarSongs: (suspend (MediaMetadata) -> List<MediaItem>)? = null,
+    /** Called when the queue runs out and nothing is going to follow it. */
+    onQueueEnded: () -> Unit = {},
 ){
     var controlsVisible by remember { mutableStateOf(false) }
     val lyrics by LyricsState.lyrics.collectAsStateWithLifecycle()
+
+    // A queue that has run out leaves the last track and its lyrics on screen, which reads as a
+    // hang. The screen leaves for Home after a moment - unless someone reaches for the remote,
+    // which the preview handler below takes as a cancel.
+    var queueEnded by remember { mutableStateOf(false) }
 
     // The loading state and its scope live here rather than inside the AnimatedVisibility below:
     // that content is disposed when the controls auto-hide, which would cancel a fetch in flight.
@@ -125,6 +139,27 @@ fun TvNowPlaying(
     val oledProtectionMode by AppearanceSettingsManager(LocalContext.current).oledProtectionMode.collectAsStateWithLifecycle(
         OLEDProtectionMode.OFF
     )
+
+    DisposableEffect(mediaController) {
+        val listener = object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                // With repeat off the player ends when the last track does; repeat keeps it
+                // running, so this only fires when the queue is really over.
+                queueEnded = playbackState == Player.STATE_ENDED
+            }
+        }
+
+        mediaController?.addListener(listener)
+
+        onDispose { mediaController?.removeListener(listener) }
+    }
+
+    LaunchedEffect(queueEnded) {
+        if (queueEnded) {
+            delay(FinishedQueueHomeDelay)
+            onQueueEnded()
+        }
+    }
 
     LaunchedEffect(Unit) {
         interactionFlow
@@ -152,6 +187,12 @@ fun TvNowPlaying(
         modifier = Modifier
             .padding(horizontal = 48.dp, vertical = 24.dp)
             .focusable(true)
+            // Any key at all means someone is at the remote, so the finished queue stays put.
+            // Preview, so keys the buttons consume (OK on the queue button, say) count too.
+            .onPreviewKeyEvent { keyEvent ->
+                if (keyEvent.type == KeyEventType.KeyDown) queueEnded = false
+                false
+            }
             .onKeyEvent { keyEvent ->
                 if (keyEvent.type == KeyEventType.KeyDown) {
                     // Remotes with channel buttons skip tracks, whether or not the controls are shown.

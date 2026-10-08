@@ -92,7 +92,16 @@ fun NowPlayingContent(
             mediaController,
             iconTextColor,
             metadata,
-            loadSimilarSongs = { viewModel.getSimilarMusic(it) }
+            loadSimilarSongs = { viewModel.getSimilarMusic(it) },
+            onQueueEnded = {
+                // The queue is over with nothing to follow it: leave the player rather than sit
+                // on the last track looking stuck. Popping to Home drops the player screen too,
+                // so Back cannot return to it.
+                navHostController.navigate(Screen.Home) {
+                    launchSingleTop = true
+                    popUpTo(Screen.Home) { inclusive = false }
+                }
+            }
         )
     } else if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE) {
         NowPlayingLandscape(
