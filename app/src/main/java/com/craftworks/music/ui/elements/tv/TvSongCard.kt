@@ -6,10 +6,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -37,6 +39,8 @@ fun TvHorizontalSongCard(
     song: MediaItem = MediaItem.EMPTY,
     modifier: Modifier = Modifier,
     showTrackNumber: Boolean = false,
+    /** Marks the track the player is on: the TV queue highlights it and opens focus on it. */
+    isCurrent: Boolean = false,
     onClick: () -> Unit = { },
     onLongClick: () -> Unit = { }
 ) {
@@ -85,11 +89,21 @@ fun TvHorizontalSongCard(
             Row (
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (isCurrent)
+                    Icon(
+                        imageVector = Icons.Rounded.PlayArrow,
+                        contentDescription = "Now playing",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .padding(start = 16.dp)
+                            .size(20.dp)
+                    )
                 Text(
                     text = song.mediaMetadata.title.toString(),
+                    color = if (isCurrent) MaterialTheme.colorScheme.primary else Color.Unspecified,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(start = 16.dp)
+                    modifier = Modifier.padding(start = if (isCurrent) 8.dp else 16.dp)
                 )
                 if (song.mediaMetadata.extras?.getBoolean(METADATA_KEY_IS_EXPLICIT) == true)
                     Icon(

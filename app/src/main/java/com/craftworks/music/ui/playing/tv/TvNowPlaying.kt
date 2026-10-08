@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
@@ -110,9 +111,13 @@ fun TvNowPlaying(
 
     // The loading state and its scope live here rather than inside the AnimatedVisibility below:
     // that content is disposed when the controls auto-hide, which would cancel a fetch in flight.
+    // The scope also hands focus back to the queue button once its dialog has closed.
     val context = LocalContext.current
-    val similarSongsScope = rememberCoroutineScope()
+    val screenScope = rememberCoroutineScope()
     var similarSongsLoading by remember { mutableStateOf(false) }
+
+    var showPlayQueue by remember { mutableStateOf(false) }
+    val playQueueButtonRequester = remember { FocusRequester() }
 
     // Auto-hide after 5 seconds of visibility
     val interactionFlow = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
@@ -124,7 +129,11 @@ fun TvNowPlaying(
     LaunchedEffect(Unit) {
         interactionFlow
             .debounce(5000.milliseconds)
-            .collect { controlsVisible = false }
+            .collect {
+                // Never hide the controls while the queue is open: the queue button is where
+                // focus goes when it closes, and a hidden button is disposed.
+                if (!showPlayQueue) controlsVisible = false
+            }
     }
 
     val iconTextColor by animateColorAsState(
@@ -380,7 +389,7 @@ fun TvNowPlaying(
                                 loading = similarSongsLoading,
                                 onClick = {
                                     if (!similarSongsLoading) {
-                                        similarSongsScope.launch {
+                                        screenScope.launch {
                                             similarSongsLoading = true
                                             try {
                                                 val songs = similarLoader.invoke(similarSeed).orEmpty()
@@ -453,12 +462,36 @@ fun TvNowPlaying(
                                     up = FocusRequester.Cancel
                                 }
                         )
+
+                        PlayQueueButton(
+                            onClick = {
+                                showPlayQueue = true
+                                interactionFlow.tryEmit(Unit)
+                            },
+                            modifier = Modifier
+                                .size(IconButtonDefaults.SmallButtonSize)
+                                .focusRequester(playQueueButtonRequester)
+                                .focusProperties {
+                                    up = FocusRequester.Cancel
+                                }
+                        )
                     }
                 }
 
                 if (metadata?.mediaType != MediaMetadata.MEDIA_TYPE_RADIO_STATION)
                     PlaybackProgressSlider(iconTextColor, mediaController)
             }
+        }
+
+        if (showPlayQueue) {
+            TvPlayQueue(
+                mediaController = mediaController,
+                onClose = {
+                    showPlayQueue = false
+                    interactionFlow.tryEmit(Unit)
+                    screenScope.launch { playQueueButtonRequester.requestFocus() }
+                }
+            )
         }
     }
 }

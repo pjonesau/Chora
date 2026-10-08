@@ -293,25 +293,19 @@ internal fun NextSongButton(player: Player, modifier: Modifier = Modifier) {
 
 @Composable
 fun PlayQueueButton(
-    size: Dp = 64.dp,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Button(
+    IconButton(
         onClick = onClick,
-        contentPadding = PaddingValues(6.dp),
-        colors = ButtonDefaults.colors(
-            containerColor = Color.Transparent,
-            disabledContainerColor = Color.Transparent,
-            contentColor = MaterialTheme.colorScheme.onSurface.copy(0.5f),
-            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(0.25f)
-        )
+        modifier = modifier,
+        border = toggleButtonBorder(false),
+        colors = toggleButtonColors(false),
     ) {
         Icon(
-            imageVector = ImageVector.vectorResource(R.drawable.s_m_playback),
-            contentDescription = "Close Lyrics",
-            modifier = Modifier
-                .height(size)
-                .size(size)
+            imageVector = ImageVector.vectorResource(R.drawable.rounded_queue_music_24),
+            contentDescription = stringResource(R.string.now_playing_queue),
+            modifier = Modifier.size(IconButtonDefaults.SmallIconSize),
         )
     }
 }
