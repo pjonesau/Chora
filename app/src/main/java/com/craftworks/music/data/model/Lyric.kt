@@ -253,6 +253,15 @@ fun LrcLibLyrics.toLyrics(): Lyrics? {
     return null
 }
 
+/**
+ * NetEase writes the song's credits as ordinary lyric lines: `[00:00.00] 作词 : Jim Steinman`.
+ * For a recording it has no lyrics for, those credit lines are the entire payload.
+ */
+private val neteaseCreditLine = Regex(
+    "^\\s*(作词|作曲|编曲|词|曲|制作人|出品|发行|监制|统筹|录音|混音|母带|和声|吉他|贝斯|键盘|OP|SP)\\s*[:：]",
+    RegexOption.IGNORE_CASE
+)
+
 fun NeteaseLyricsResponse.toLyrics(): Lyrics? {
     if (pureMusic == true)
         return null
@@ -264,6 +273,10 @@ fun NeteaseLyricsResponse.toLyrics(): Lyrics? {
         val tags = getTimeStamps(line)
         if (tags.isEmpty()) return@forEach
         val text = line.substringAfter("]").trim()
+        // The credits are not lyrics, whether they sit above the real ones or stand in for
+        // them. Left in, a payload that is only credits wins the line-synced tier as one
+        // line and the app shows "作词 : ..." as if it were the song.
+        if (text.isEmpty() || neteaseCreditLine.containsMatchIn(text)) return@forEach
         tags.forEach { tag ->
             val time = mmssToMilliseconds(tag) ?: 0
             originalMap[time] = text
@@ -282,8 +295,9 @@ fun NeteaseLyricsResponse.toLyrics(): Lyrics? {
         }
     }
 
-    // No timestamps parsed (no lrc, or one without any) means no usable lyrics - an empty
-    // SyncType.LINE result would otherwise win the line-synced tier over a real one.
+    // No usable lines - no lrc, none with timestamps, or nothing left once the credits are out -
+    // means no lyrics: an empty SyncType.LINE result would otherwise win the line-synced tier
+    // over a real one.
     if (originalMap.isEmpty())
         return null
 
