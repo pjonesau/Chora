@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.OutlinedTextField
@@ -226,9 +228,12 @@ private fun AddSongToPlaylist(
 ) {
     val playlists by viewModel.allPlaylists.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    // Scrollable: a library with more playlists than fit on screen used to leave the rest, and the
+    // "New Playlist" entry below them, unreachable by the remote.
     Column(
         modifier = Modifier
-            .widthIn(max = 320.dp),
+            .widthIn(max = 320.dp)
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
