@@ -12,6 +12,7 @@ import com.craftworks.music.data.repository.AlbumRepository
 import com.craftworks.music.data.repository.GenreRepository
 import com.craftworks.music.managers.DataRefreshManager
 import com.craftworks.music.managers.MediaProviderManager
+import com.craftworks.music.managers.settings.GenreGrouping
 import com.craftworks.music.managers.settings.LocalDataSettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -34,6 +35,22 @@ class GenresScreenViewModel @Inject constructor(
 ) : ViewModel() {
     private val _allGenres = MutableStateFlow<List<MediaModel.Genre>>(emptyList())
     val allGenres: StateFlow<List<MediaModel.Genre>> = _allGenres.asStateFlow()
+
+    private val _displayGenres = MutableStateFlow<List<MediaModel.Genre>>(emptyList())
+
+    /**
+     * What the genre grid shows: every genre with a card of its own, then [MediaModel.Genre.OTHER_NAME]
+     * when there are smaller genres to fold up. Always last, whatever the sort, so the tail does
+     * not move around the grid as the sort changes.
+     */
+    val displayGenres: StateFlow<List<MediaModel.Genre>> = _displayGenres.asStateFlow()
+
+    private val _otherGenres = MutableStateFlow<List<MediaModel.Genre>>(emptyList())
+
+    /** The genres the "Other" card stands for, in the current sort order. */
+    val otherGenres: StateFlow<List<MediaModel.Genre>> = _otherGenres.asStateFlow()
+
+    private val _grouping = MutableStateFlow(GenreGrouping.UNDER_5)
 
     private val _searchResults = MutableStateFlow<List<MediaModel.Genre>>(emptyList())
     val searchResults: StateFlow<List<MediaModel.Genre>> = _searchResults.asStateFlow()
@@ -85,6 +102,16 @@ class GenresScreenViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            localDataSettingsManager.genreGrouping
+                .distinctUntilChanged()
+                .collect { grouping ->
+                    _grouping.value = grouping
+                    // Regrouping only re-cuts the list already held, so no refetch.
+                    applyGrouping()
+                }
+        }
+
+        viewModelScope.launch {
             DataRefreshManager.dataSourceChangedEvent.collect {
                 // Collages and the open genre belong to the provider that is being replaced.
                 _genreArtwork.value = emptyMap()
@@ -110,11 +137,28 @@ class GenresScreenViewModel @Inject constructor(
                         startIndex = 0
                     )
                 )
+                applyGrouping()
             }
             finally {
                 _isLoading.value = false
             }
         }
+    }
+
+    /**
+     * Cuts the genre list into the ones that keep a card of their own and the ones small enough
+     * to be grouped. Off, or nothing small enough, leaves the list exactly as the provider sent
+     * it, and the grid shows no "Other" card at all.
+     */
+    private fun applyGrouping() {
+        val (small, large) = _allGenres.value.partition {
+            (it.albumCount ?: 0) < _grouping.value.groupBelow
+        }
+
+        _otherGenres.value = small
+        _displayGenres.value =
+            if (small.isEmpty()) large
+            else large + MediaModel.Genre(name = MediaModel.Genre.OTHER_NAME)
     }
 
     /** Pull to refresh: the genre list may be the same, but the collages may not. */
@@ -162,7 +206,12 @@ class GenresScreenViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val artwork = artworkSemaphore.withPermit {
-                    genreRepository.getGenreArtwork(key)
+                    // The group card is not a genre, so its collage is assembled from the
+                    // genres it stands for.
+                    if (key == MediaModel.Genre.OTHER_NAME)
+                        genreRepository.getGroupArtwork(_otherGenres.value)
+                    else
+                        genreRepository.getGenreArtwork(key)
                 }
                 if (artwork.isNotEmpty())
                     _genreArtwork.update { it + (key to artwork) }

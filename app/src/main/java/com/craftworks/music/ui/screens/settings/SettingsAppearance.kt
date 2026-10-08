@@ -58,8 +58,11 @@ import com.craftworks.music.R
 import com.craftworks.music.data.model.Screen
 import com.craftworks.music.managers.settings.AppTheme
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
+import com.craftworks.music.managers.settings.GenreGrouping
+import com.craftworks.music.managers.settings.LocalDataSettingsManager
 import com.craftworks.music.ui.elements.ActionButtonType
 import com.craftworks.music.ui.elements.dialogs.appearance.BackgroundDialog
+import com.craftworks.music.ui.elements.dialogs.appearance.GenreGroupingDialog
 import com.craftworks.music.ui.elements.dialogs.appearance.HomeItemsDialog
 import com.craftworks.music.ui.elements.dialogs.appearance.NameDialog
 import com.craftworks.music.ui.elements.dialogs.appearance.NavbarItemsDialog
@@ -83,6 +86,7 @@ fun S_AppearanceScreen(navHostController: NavHostController = rememberNavControl
     var showThemesDialog by remember { mutableStateOf(false) }
     var showNavbarItemsDialog by remember { mutableStateOf(false) }
     var showHomeItemsDialog by remember { mutableStateOf(false) }
+    var showGenreGroupingDialog by remember { mutableStateOf(false) }
     var showNowPlayingTitleAlignmentDialog by remember { mutableStateOf(false) }
     var showNowPlayingLyricsAlignmentDialog by remember { mutableStateOf(false) }
     var showAlbumDetailsActionButtonsDialog by remember { mutableStateOf(false) }
@@ -307,6 +311,21 @@ fun S_AppearanceScreen(navHostController: NavHostController = rememberNavControl
                         ImageVector.vectorResource(R.drawable.s_a_home_items),
                         toggleEvent = {
                             showHomeItemsDialog = true
+                        }
+                    )
+
+                    val genreGrouping by LocalDataSettingsManager(context).genreGrouping
+                        .collectAsState(GenreGrouping.UNDER_5)
+
+                    SettingsDialogButton(
+                        stringResource(R.string.appearance_genre_grouping),
+                        if (genreGrouping == GenreGrouping.OFF)
+                            stringResource(R.string.genre_grouping_off)
+                        else
+                            stringResource(R.string.genre_grouping_under, genreGrouping.groupBelow),
+                        ImageVector.vectorResource(R.drawable.rounded_genre_24),
+                        toggleEvent = {
+                            showGenreGroupingDialog = true
                         }
                     )
 
@@ -557,6 +576,9 @@ fun S_AppearanceScreen(navHostController: NavHostController = rememberNavControl
 
         if(showHomeItemsDialog)
             HomeItemsDialog(setShowDialog = { showHomeItemsDialog = it })
+
+        if(showGenreGroupingDialog)
+            GenreGroupingDialog(setShowDialog = { showGenreGroupingDialog = it })
 
         if(showNowPlayingTitleAlignmentDialog)
             NowPlayingTitleAlignmentDialog(

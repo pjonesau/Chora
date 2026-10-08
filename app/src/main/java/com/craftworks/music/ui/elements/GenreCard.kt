@@ -39,8 +39,27 @@ private const val CollageRows = 2
 
 /** The genre's name, with Navidrome's placeholder for untagged tracks shown as something human. */
 @Composable
-fun genreDisplayName(name: String): String =
-    if (name == MediaModel.Genre.EMPTY_NAME) stringResource(R.string.genre_unknown) else name
+fun genreDisplayName(name: String): String = when (name) {
+    MediaModel.Genre.EMPTY_NAME -> stringResource(R.string.genre_unknown)
+    MediaModel.Genre.OTHER_NAME -> stringResource(R.string.genre_other)
+    else -> name
+}
+
+/**
+ * The line under a genre's name. The group card counts the genres behind it instead: their own
+ * song and album counts overlap, since an album tagged with several genres is counted by each
+ * of them, so summing them would overstate what is in the group.
+ */
+@Composable
+fun genreSubtitle(genre: MediaModel.Genre, groupSize: Int?): String =
+    if (genre.name == MediaModel.Genre.OTHER_NAME && groupSize != null)
+        stringResource(R.string.genre_group_count, groupSize)
+    else
+        stringResource(
+            R.string.genre_song_album_count,
+            genre.songCount ?: 0,
+            genre.albumCount ?: 0
+        )
 
 /**
  * A genre's artwork as a grid of album covers.
@@ -106,7 +125,8 @@ fun GenreCard(
     artwork: List<GenreRepository.GenreArtwork>,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onArtworkRequest: (MediaModel.Genre) -> Unit = {}
+    onArtworkRequest: (MediaModel.Genre) -> Unit = {},
+    groupSize: Int? = null
 ) {
     // Only composed while the card is on screen, which is what makes the artwork fetch lazy -
     // a genre that never scrolls into view never costs a request.
@@ -135,11 +155,7 @@ fun GenreCard(
             modifier = Modifier.padding(top = 6.dp)
         )
         Text(
-            text = stringResource(
-                R.string.genre_song_album_count,
-                genre.songCount ?: 0,
-                genre.albumCount ?: 0
-            ),
+            text = genreSubtitle(genre, groupSize),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,

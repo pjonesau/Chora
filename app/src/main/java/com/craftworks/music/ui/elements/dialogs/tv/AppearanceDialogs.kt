@@ -40,6 +40,8 @@ import com.craftworks.music.data.BottomNavItem
 import com.craftworks.music.data.model.Screen
 import com.craftworks.music.managers.settings.AppTheme
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
+import com.craftworks.music.managers.settings.GenreGrouping
+import com.craftworks.music.managers.settings.LocalDataSettingsManager
 import com.craftworks.music.managers.settings.OLEDProtectionMode
 import com.craftworks.music.ui.playing.NowPlayingAlignment
 import com.craftworks.music.ui.playing.NowPlayingBackground
@@ -288,6 +290,31 @@ fun OledProtectionModeDialog(
                     OLEDProtectionMode.MINIMAL -> R.string.oled_protection_mode_minimal
                 }
             )
+        }
+    )
+}
+
+@Composable
+fun GenreGroupingDialog(
+    setShowDialog: (Boolean) -> Unit = { }
+) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val grouping by LocalDataSettingsManager(context).genreGrouping.collectAsState(
+        GenreGrouping.UNDER_5
+    )
+
+    GenericListDialog(
+        setShowDialog = setShowDialog,
+        titleRes = R.string.appearance_genre_grouping,
+        options = GenreGrouping.entries,
+        selectedOption = grouping,
+        onOptionSelected = { option ->
+            coroutineScope.launch { LocalDataSettingsManager(context).saveGenreGrouping(option) }
+        },
+        label = { option ->
+            if (option == GenreGrouping.OFF) stringResource(R.string.genre_grouping_off)
+            else stringResource(R.string.genre_grouping_under, option.groupBelow)
         }
     )
 }

@@ -18,6 +18,9 @@
                 <string name="oled_protection_mode_minimal">Minimal</string>
         <string name="appearance_navbar_items">Navigation Bar Items</string>
         <string name="appearance_home_items">Home Screen Items</string>
+        <string name="appearance_genre_grouping">Genre Grouping</string>
+            <string name="genre_grouping_off">Off</string>
+            <string name="genre_grouping_under">Fewer than %1$d albums</string>
         <string name="appearance_now_playing_title_alignment">Now Playing Title Alignment</string>
         <string name="appearance_now_playing_lyrics_alignment">Now Playing Lyrics Alignment</string>
             <string name="alignment_setting_left">Left</string>

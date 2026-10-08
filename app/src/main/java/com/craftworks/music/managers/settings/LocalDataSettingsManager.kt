@@ -27,6 +27,18 @@ import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * How small a genre has to be before the Genres tab groups it under "Other" with the rest of
+ * the long tail, by album count. [OFF] gives every genre a card of its own.
+ */
+enum class GenreGrouping(val groupBelow: Int) {
+    OFF(0),
+    UNDER_3(3),
+    UNDER_5(5),
+    UNDER_10(10),
+    UNDER_20(20)
+}
+
 @Singleton
 class LocalDataSettingsManager @Inject constructor(
     @ApplicationContext private val context: Context
@@ -50,6 +62,7 @@ class LocalDataSettingsManager @Inject constructor(
         private val SHOW_FAVORITES_SONG = booleanPreferencesKey("show_favorites_song")
         private val SORT_GENRE = stringPreferencesKey("sort_genre")
         private val SORT_GENRE_ORDER = stringPreferencesKey("sort_genre_order")
+        private val GENRE_GROUPING = stringPreferencesKey("genre_grouping")
     }
 /*
     val localRadios: Flow<MutableList<com.craftworks.music.data.model.MediaModel.Radio>> =
@@ -187,6 +200,13 @@ class LocalDataSettingsManager @Inject constructor(
             SortOrder.entries.find { it.name == preferences[SORT_GENRE_ORDER] } ?: SortOrder.DESC
         }
 
+    /** Five albums: small enough that the tail of the genre list is the part worth folding up. */
+    val genreGrouping: Flow<GenreGrouping> =
+        context.dataStore.data.map { preferences ->
+            GenreGrouping.entries.find { it.name == preferences[GENRE_GROUPING] }
+                ?: GenreGrouping.UNDER_5
+        }
+
     suspend fun saveSortAlbum(sort: AlbumListSort) {
         withContext(NonCancellable) {
             context.dataStore.edit { preferences ->
@@ -268,6 +288,14 @@ class LocalDataSettingsManager @Inject constructor(
         withContext(NonCancellable) {
             context.dataStore.edit { preferences ->
                 preferences[SORT_GENRE_ORDER] = sortOrder.name
+            }
+        }
+    }
+
+    suspend fun saveGenreGrouping(grouping: GenreGrouping) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[GENRE_GROUPING] = grouping.name
             }
         }
     }

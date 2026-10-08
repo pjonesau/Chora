@@ -177,6 +177,14 @@ abstract class MediaModel
              */
             const val EMPTY_NAME = "<Empty>"
 
+            /**
+             * The entry that stands in for the genres too small to have a card of their own,
+             * so one card does not turn a long tail into a page of one-album genres. Angle
+             * brackets, like EMPTY_NAME, so a real genre cannot collide with it, and it never
+             * reaches a provider: its card opens the group of genres behind it instead.
+             */
+            const val OTHER_NAME = "<Other>"
+
             /** The name to send to a provider when filtering by this genre. */
             fun filterValue(name: String): String = if (name == EMPTY_NAME) "" else name
         }

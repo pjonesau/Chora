@@ -55,6 +55,7 @@ import com.craftworks.music.ui.screens.GenreDetailsScreen
 import com.craftworks.music.ui.screens.GenresScreen
 import com.craftworks.music.ui.screens.HomeListsScreen
 import com.craftworks.music.ui.screens.HomeScreen
+import com.craftworks.music.ui.screens.OtherGenresScreen
 import com.craftworks.music.ui.screens.PlaylistDetails
 import com.craftworks.music.ui.screens.PlaylistScreen
 import com.craftworks.music.ui.screens.RadioScreen
@@ -72,6 +73,7 @@ import com.craftworks.music.ui.screens.tv.TvArtistScreen
 import com.craftworks.music.ui.screens.tv.TvGenreDetailsScreen
 import com.craftworks.music.ui.screens.tv.TvGenreScreen
 import com.craftworks.music.ui.screens.tv.TvHomeScreen
+import com.craftworks.music.ui.screens.tv.TvOtherGenresScreen
 import com.craftworks.music.ui.screens.tv.TvPlaylistDetails
 import com.craftworks.music.ui.screens.tv.TvPlaylistScreen
 import com.craftworks.music.ui.screens.tv.TvRadioScreen
@@ -205,6 +207,19 @@ fun SetupNavGraph(
                         TvGenreDetailsScreen(genreName, navController, mediaController, viewModel)
                     else
                         GenreDetailsScreen(genreName, navController, mediaController, viewModel)
+                }
+                // The genres folded into the "Other" card, which have no card of their own.
+                composable<Screen.OtherGenres> { backStackEntry ->
+                    val parentEntry = remember(backStackEntry) {
+                        navController.getBackStackEntry<Screen.MainGraph>()
+                    }
+                    val viewModel: GenresScreenViewModel = hiltViewModel(parentEntry)
+                    if (isTv)
+                        TvSideNavigation(navController, mediaController) {
+                            TvOtherGenresScreen(navController, viewModel)
+                        }
+                    else
+                        OtherGenresScreen(navController, viewModel)
                 }
             }
 

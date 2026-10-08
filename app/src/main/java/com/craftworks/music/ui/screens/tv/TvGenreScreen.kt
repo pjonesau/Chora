@@ -38,6 +38,7 @@ import androidx.tv.material3.IconButton
 import androidx.tv.material3.Text
 import com.craftworks.music.R
 import com.craftworks.music.data.model.GenreListSort
+import com.craftworks.music.data.model.MediaModel
 import com.craftworks.music.data.model.Screen
 import com.craftworks.music.data.model.SortOrder
 import com.craftworks.music.managers.MediaProviderManager
@@ -51,7 +52,8 @@ fun TvGenreScreen(
     navHostController: NavHostController,
     viewModel: GenresScreenViewModel = hiltViewModel()
 ) {
-    val allGenresList by viewModel.allGenres.collectAsStateWithLifecycle()
+    val displayGenres by viewModel.displayGenres.collectAsStateWithLifecycle()
+    val otherGenres by viewModel.otherGenres.collectAsStateWithLifecycle()
     val artwork by viewModel.genreArtwork.collectAsStateWithLifecycle()
     val sort by viewModel.sort.collectAsStateWithLifecycle()
     val sortOrder by viewModel.sortOrder.collectAsStateWithLifecycle()
@@ -119,14 +121,19 @@ fun TvGenreScreen(
             }
         }
 
-        items(allGenresList, key = { it.name }) { genre ->
+        items(displayGenres, key = { it.name }) { genre ->
             TvGenreCard(
                 genre = genre,
                 artwork = artwork[genre.name].orEmpty(),
                 modifier = focusRestore.focusModifier(genre.name),
                 onArtworkRequest = { viewModel.loadGenreArtwork(it) },
+                groupSize = otherGenres.size.takeIf { genre.name == MediaModel.Genre.OTHER_NAME },
                 onClick = {
-                    navHostController.navigate(Screen.GenreDetails(genre.name)) {
+                    // The group card has no albums of its own, so it opens the genres behind it.
+                    navHostController.navigate(
+                        if (genre.name == MediaModel.Genre.OTHER_NAME) Screen.OtherGenres
+                        else Screen.GenreDetails(genre.name)
+                    ) {
                         launchSingleTop = true
                     }
                 }
