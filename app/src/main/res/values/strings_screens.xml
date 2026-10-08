@@ -11,6 +11,11 @@
     // Artist Details
     <string name="artist_details_discography">Discography</string>
 
+    // Genres
+    <string name="genre_song_album_count">%1$d songs · %2$d albums</string>
+    <string name="genre_unknown">Unknown genre</string>
+    <string name="genre_empty">No albums in this genre</string>
+
     // Album Details
     <string name="album_details_disc">Disc %s</string>
 </resources>

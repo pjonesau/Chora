@@ -12,6 +12,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaSession
 import com.craftworks.music.data.model.AlbumArtistListSort
 import com.craftworks.music.data.model.AlbumListSort
+import com.craftworks.music.data.model.GenreListSort
 import com.craftworks.music.data.model.MediaModel
 import com.craftworks.music.data.model.ProviderType
 import com.craftworks.music.data.model.SongListSort
@@ -47,6 +48,8 @@ class LocalDataSettingsManager @Inject constructor(
         private val SORT_SONG = stringPreferencesKey("sort_song")
         private val SORT_SONG_ORDER = stringPreferencesKey("sort_song_order")
         private val SHOW_FAVORITES_SONG = booleanPreferencesKey("show_favorites_song")
+        private val SORT_GENRE = stringPreferencesKey("sort_genre")
+        private val SORT_GENRE_ORDER = stringPreferencesKey("sort_genre_order")
     }
 /*
     val localRadios: Flow<MutableList<com.craftworks.music.data.model.MediaModel.Radio>> =
@@ -173,6 +176,17 @@ class LocalDataSettingsManager @Inject constructor(
             preferences[SHOW_FAVORITES_SONG] ?: false
         }
 
+    // Genres default to the largest first, unlike the other lists which default to name order.
+    val sortGenre: Flow<GenreListSort> =
+        context.dataStore.data.map { preferences ->
+            GenreListSort.entries.find { it.name == preferences[SORT_GENRE] } ?: GenreListSort.SONG_COUNT
+        }
+
+    val sortGenreOrder: Flow<SortOrder> =
+        context.dataStore.data.map { preferences ->
+            SortOrder.entries.find { it.name == preferences[SORT_GENRE_ORDER] } ?: SortOrder.DESC
+        }
+
     suspend fun saveSortAlbum(sort: AlbumListSort) {
         withContext(NonCancellable) {
             context.dataStore.edit { preferences ->
@@ -238,6 +252,22 @@ class LocalDataSettingsManager @Inject constructor(
         withContext(NonCancellable) {
             context.dataStore.edit { preferences ->
                 preferences[SHOW_FAVORITES_SONG] = showFavorites;
+            }
+        }
+    }
+
+    suspend fun saveSortGenre(sort: GenreListSort) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[SORT_GENRE] = sort.name
+            }
+        }
+    }
+
+    suspend fun saveSortGenreOrder(sortOrder: SortOrder) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[SORT_GENRE_ORDER] = sortOrder.name
             }
         }
     }

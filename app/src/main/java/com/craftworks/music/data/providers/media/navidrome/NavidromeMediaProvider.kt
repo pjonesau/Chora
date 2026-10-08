@@ -266,6 +266,9 @@ class NavidromeMediaProvider : SubsonicMediaProvider() {
     }
 
     override suspend fun getAlbumList(query: MediaQuery.AlbumListQuery): List<MediaModel.Album> {
+        // The native API filters genres by id, and getGenres only returns names, so genre
+        // queries go through the Subsonic endpoints, which filter by name.
+        if (query.genreIds?.any() == true) return super.getAlbumList(query)
         return service.getAlbumList(
             end = query.startIndex + (query.limit ?: 50),
             order = query.sortOrder.name,
@@ -295,6 +298,9 @@ class NavidromeMediaProvider : SubsonicMediaProvider() {
     }
 
     override suspend fun getSongList(query: MediaQuery.SongListQuery): List<MediaModel.Song> {
+        // See getAlbumList: the native API's genre_id is an id, the Subsonic endpoint takes
+        // the genre name, which is all getGenres gives us.
+        if (query.genreIds?.any() == true) return super.getSongList(query)
         return service.getSongList(
             end = query.startIndex + (query.limit ?: 50),
             order = query.sortOrder.name,

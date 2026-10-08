@@ -320,7 +320,7 @@ fun NavbarItemsDialog(setShowDialog: (Boolean) -> Unit) {
                         ), BottomNavItem(
                             "Albums", R.drawable.rounded_library_music_24, Screen.Albums
                         ), BottomNavItem(
-                            "Songs", R.drawable.round_music_note_24, Screen.Songs, false
+                            "Genres", R.drawable.rounded_genre_24, Screen.Genres, false
                         ), BottomNavItem(
                             "Artists", R.drawable.rounded_artist_24, Screen.Artists
                         ), BottomNavItem(

@@ -403,8 +403,9 @@ fun TvSideNavigation(
     val context = LocalContext.current
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
-    val (home, albums, songs, artists, radios, playlists, settings) = remember { FocusRequester.createRefs() }
+    val (home, albums, genres, artists, radios, playlists, settings) = remember { FocusRequester.createRefs() }
     val currentRoute by navController.currentBackStackEntryFlow.collectAsStateWithLifecycle(initialValue = null)
+    val currentProvider by MediaProviderManager.currentProvider.collectAsStateWithLifecycle()
 
     val orderedNavItems = AppearanceSettingsManager(context).bottomNavItemsFlow.collectAsState(
         initial = listOf(
@@ -415,7 +416,7 @@ fun TvSideNavigation(
                 stringResource((R.string.nav_albums)), R.drawable.rounded_library_music_24, Screen.Albums
             ),
             BottomNavItem(
-                stringResource((R.string.nav_songs)), R.drawable.round_music_note_24, Screen.Songs, false
+                stringResource((R.string.nav_genres)), R.drawable.rounded_genre_24, Screen.Genres, false
             ),
             BottomNavItem(
                 stringResource((R.string.nav_artists)), R.drawable.rounded_artist_24, Screen.Artists
@@ -428,6 +429,12 @@ fun TvSideNavigation(
             ),
         )
     ).value
+
+    // A provider with no notion of genres would make this a dead end, so hide the entry.
+    // Only ever disables, so a user who turned it off does not have it turned back on.
+    orderedNavItems.firstOrNull { it.screenRoute == Screen.Genres }?.let {
+        if (currentProvider?.featureFlags?.contains(ProviderFeature.GENRES) != true) it.enabled = false
+    }
 
     NavigationDrawer(
         modifier = Modifier.fillMaxSize(),
@@ -442,7 +449,7 @@ fun TvSideNavigation(
                             when (currentRoute) {
                                 Screen.Home -> home
                                 Screen.Albums -> albums
-                                Screen.Songs -> songs
+                                Screen.Genres -> genres
                                 Screen.Artists -> artists
                                 Screen.Radios -> radios
                                 Screen.Playlists -> playlists
@@ -490,7 +497,7 @@ fun TvSideNavigation(
                                 when (item.screenRoute) {
                                     Screen.Home -> home
                                     Screen.Albums -> albums
-                                    Screen.Songs -> songs
+                                    Screen.Genres -> genres
                                     Screen.Artists -> artists
                                     Screen.Radios -> radios
                                     Screen.Playlists -> playlists
@@ -640,7 +647,7 @@ fun AnimatedBottomNavBar(
             ), BottomNavItem(
                 stringResource(R.string.nav_albums), R.drawable.rounded_library_music_24, Screen.Albums
             ), BottomNavItem(
-                stringResource(R.string.nav_songs), R.drawable.round_music_note_24, Screen.Songs
+                stringResource(R.string.nav_genres), R.drawable.rounded_genre_24, Screen.Genres
             ), BottomNavItem(
                 stringResource(R.string.nav_artists), R.drawable.rounded_artist_24, Screen.Artists
             ), BottomNavItem(
@@ -655,6 +662,10 @@ fun AnimatedBottomNavBar(
         currentProvider?.featureFlags?.contains(ProviderFeature.INTERNET_RADIO) ?: false
     orderedNavItems.first {it.screenRoute == Screen.Playlists}.enabled =
         currentProvider?.featureFlags?.contains(ProviderFeature.PLAYLISTS) ?: false
+    // firstOrNull, not first: a nav list saved before the Genres migration has no Genres entry.
+    orderedNavItems.firstOrNull {it.screenRoute == Screen.Genres}?.let {
+        if (currentProvider?.featureFlags?.contains(ProviderFeature.GENRES) != true) it.enabled = false
+    }
 
     if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_PORTRAIT) {
         val expanded by remember { derivedStateOf { scaffoldState.bottomSheetState.targetValue == SheetValue.Expanded } }

@@ -13,6 +13,12 @@ sealed interface Screen {
     @Serializable
     object Songs : Screen
     @Serializable
+    object Genres : Screen
+    @Serializable
+    object GenreList : Screen
+    @Serializable
+    data class GenreDetails(val genreName: String) : Screen
+    @Serializable
     object Radios : Screen
     @Serializable
     object NowPlayingLandscape : Screen

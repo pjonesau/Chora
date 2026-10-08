@@ -168,7 +168,19 @@ abstract class MediaModel
         val imageUrl: String? = null,
         val name: String,
         val songCount: Int? = null
-    ) : Parcelable
+    ) : Parcelable {
+        companion object {
+            /**
+             * Navidrome reports tracks with no genre tag under this literal name. It is kept as
+             * the genre's name so the value stays non-empty for routing, and translated back to
+             * "" on the way out - filtering on the literal string matches nothing.
+             */
+            const val EMPTY_NAME = "<Empty>"
+
+            /** The name to send to a provider when filtering by this genre. */
+            fun filterValue(name: String): String = if (name == EMPTY_NAME) "" else name
+        }
+    }
 
     data class InternetRadioStation(
         override val id: String,

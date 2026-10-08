@@ -51,6 +51,8 @@ import com.craftworks.music.ui.screens.AlbumDetails
 import com.craftworks.music.ui.screens.AlbumScreen
 import com.craftworks.music.ui.screens.ArtistDetails
 import com.craftworks.music.ui.screens.ArtistsScreen
+import com.craftworks.music.ui.screens.GenreDetailsScreen
+import com.craftworks.music.ui.screens.GenresScreen
 import com.craftworks.music.ui.screens.HomeListsScreen
 import com.craftworks.music.ui.screens.HomeScreen
 import com.craftworks.music.ui.screens.PlaylistDetails
@@ -67,6 +69,8 @@ import com.craftworks.music.ui.screens.tv.TvAlbumDetails
 import com.craftworks.music.ui.screens.tv.TvAlbumScreen
 import com.craftworks.music.ui.screens.tv.TvArtistDetailsScreen
 import com.craftworks.music.ui.screens.tv.TvArtistScreen
+import com.craftworks.music.ui.screens.tv.TvGenreDetailsScreen
+import com.craftworks.music.ui.screens.tv.TvGenreScreen
 import com.craftworks.music.ui.screens.tv.TvHomeScreen
 import com.craftworks.music.ui.screens.tv.TvPlaylistDetails
 import com.craftworks.music.ui.screens.tv.TvPlaylistScreen
@@ -79,6 +83,7 @@ import com.craftworks.music.ui.screens.tv.settings.TvS_PlaybackScreen
 import com.craftworks.music.ui.screens.tv.settings.TvS_ProviderScreen
 import com.craftworks.music.ui.viewmodels.AlbumScreenViewModel
 import com.craftworks.music.ui.viewmodels.ArtistsScreenViewModel
+import com.craftworks.music.ui.viewmodels.GenresScreenViewModel
 import com.craftworks.music.ui.viewmodels.HomeScreenViewModel
 import com.craftworks.music.ui.viewmodels.PlaylistScreenViewModel
 import com.craftworks.music.ui.viewmodels.RadioScreenViewModel
@@ -176,6 +181,33 @@ fun SetupNavGraph(
                 else
                     SongsScreen(mediaController, viewModel)
             }
+            //Genres
+            navigation<Screen.Genres>(startDestination = Screen.GenreList) {
+                composable<Screen.GenreList> { backStackEntry ->
+                    val parentEntry = remember(backStackEntry) {
+                        navController.getBackStackEntry<Screen.MainGraph>()
+                    }
+                    val viewModel: GenresScreenViewModel = hiltViewModel(parentEntry)
+                    if (isTv)
+                        TvSideNavigation(navController, mediaController) {
+                            TvGenreScreen(navController, viewModel)
+                        }
+                    else
+                        GenresScreen(navController, viewModel)
+                }
+                composable<Screen.GenreDetails> { backStackEntry ->
+                    val parentEntry = remember(backStackEntry) {
+                        navController.getBackStackEntry<Screen.MainGraph>()
+                    }
+                    val genreName = backStackEntry.toRoute<Screen.GenreDetails>().genreName
+                    val viewModel: GenresScreenViewModel = hiltViewModel(parentEntry)
+                    if (isTv)
+                        TvGenreDetailsScreen(genreName, navController, mediaController, viewModel)
+                    else
+                        GenreDetailsScreen(genreName, navController, mediaController, viewModel)
+                }
+            }
+
             composable<Screen.Radios> { backStackEntry ->
                 val parentEntry = remember(backStackEntry) {
                     navController.getBackStackEntry<Screen.MainGraph>()

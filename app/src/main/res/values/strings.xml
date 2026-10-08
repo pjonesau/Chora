@@ -4,6 +4,7 @@
     // Navigation
     <string name="nav_home">Home</string>
     <string name="nav_songs">Songs</string>
+    <string name="nav_genres">Genres</string>
     <string name="nav_albums">Albums</string>
     <string name="nav_artists">Artists</string>
     <string name="nav_radios">Radios</string>
