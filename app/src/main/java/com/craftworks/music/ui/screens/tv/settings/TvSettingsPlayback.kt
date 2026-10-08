@@ -62,10 +62,10 @@ fun TvS_PlaybackScreen() {
 
         item {
             SettingsButtonItem(
-                title = stringResource(R.string.playback_max_bitrate_wifi),
+                title = stringResource(R.string.playback_max_bitrate_mobile_data),
                 subtitle = if (transcodingBitrateData != "No Transcoding") "$transcodingBitrateData Kbps" else transcodingBitrateData,
                 icon = ImageVector.vectorResource(R.drawable.s_p_transcoding),
-                onClick = { showWifiTranscodingDialog = true }
+                onClick = { showDataTranscodingDialog = true }
             )
         }
 
