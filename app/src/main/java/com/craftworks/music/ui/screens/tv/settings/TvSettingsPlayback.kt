@@ -1,13 +1,10 @@
 package com.craftworks.music.ui.screens.tv.settings
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -18,24 +15,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Surface
-import androidx.tv.material3.Text
 import com.craftworks.music.R
 import com.craftworks.music.managers.settings.PlaybackSettingsManager
 import com.craftworks.music.ui.elements.dialogs.tv.TranscodingBitrateDialog
 import com.craftworks.music.ui.elements.dialogs.tv.TranscodingFormatDialog
+import com.craftworks.music.ui.elements.tv.TvSettingsStepper
 import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
 
 @Composable
 @Preview(device = "id:tv_1080p", showSystemUi = true, showBackground = true)
@@ -90,56 +80,22 @@ fun TvS_PlaybackScreen() {
         }
 
         item {
-            val sliderValue by PlaybackSettingsManager(context).scrobblePercentFlow.collectAsState(7)
+            val settingsManager = remember { PlaybackSettingsManager(context) }
+            val scrobblePercent by settingsManager.scrobblePercentFlow.collectAsState(7)
 
-            Surface(
-                shape = MaterialTheme.shapes.medium,
-                modifier = Modifier
-                    .padding(vertical = 8.dp),
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.playback_min_scrobble_percentage),
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    Slider(
-                        value = sliderValue.toFloat(),
-                        onValueChange = {
-                            coroutineScope.launch {
-                                PlaybackSettingsManager(context).setScrobblePercent(it.roundToInt())
-                            }
-                        },
-                        valueRange = 0f..10f,
-                        steps = 5,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .onKeyEvent { keyEvent ->
-                                when (keyEvent.key) {
-                                    Key.DirectionRight -> {
-                                        coroutineScope.launch {
-                                            PlaybackSettingsManager(context).setScrobblePercent(sliderValue + 1)
-                                        }
-                                        true
-                                    }
-
-                                    Key.DirectionLeft -> {
-                                        coroutineScope.launch {
-                                            PlaybackSettingsManager(context).setScrobblePercent(sliderValue - 1)
-                                        }
-                                        true
-                                    }
-
-                                    else -> false
-                                }
-                            }
-                    )
-                }
-            }
+            TvSettingsStepper(
+                title = stringResource(R.string.playback_min_scrobble_percentage),
+                value = stringResource(R.string.playback_min_scrobble_percentage_value, scrobblePercent),
+                canDecrease = scrobblePercent > 0,
+                canIncrease = scrobblePercent < 10,
+                onDecrease = {
+                    coroutineScope.launch { settingsManager.setScrobblePercent(scrobblePercent - 1) }
+                },
+                onIncrease = {
+                    coroutineScope.launch { settingsManager.setScrobblePercent(scrobblePercent + 1) }
+                },
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
         }
     }
 
