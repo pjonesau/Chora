@@ -352,11 +352,21 @@ fun TvArtistDetailsScreen(
                                     modifier = Modifier.weight(1f),
                                     contentPadding = ButtonDefaults.ButtonWithIconContentPadding
                                 ) {
-                                    Icon(
-                                        ImageVector.vectorResource(R.drawable.rounded_radio),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(ButtonDefaults.IconSize),
-                                    )
+                                    if (radioLoading) {
+                                        // The fetch can take 10-20s on a server that builds the
+                                        // queue from similar artists, so the button shows it is
+                                        // working rather than looking dead.
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(ButtonDefaults.IconSize),
+                                            strokeWidth = 2.dp,
+                                        )
+                                    } else {
+                                        Icon(
+                                            ImageVector.vectorResource(R.drawable.rounded_radio),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(ButtonDefaults.IconSize),
+                                        )
+                                    }
                                     Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                                     Text(stringResource(R.string.action_radio))
                                 }

@@ -199,6 +199,10 @@ class NavidromeMediaProvider : SubsonicMediaProvider() {
 
             install(HttpTimeout) {
                 requestTimeoutMillis = 60000
+                // Same as the Subsonic client: without these, OkHttp's 10s socket timeout is
+                // what a slow endpoint actually gets.
+                connectTimeoutMillis = 15000
+                socketTimeoutMillis = 60000
             }
 
             engine {

@@ -189,6 +189,12 @@ open class SubsonicMediaProvider : MediaProvider() {
 
             install(HttpTimeout) {
                 requestTimeoutMillis = 60000
+                // OkHttp's own 10s socket timeout applies until these are set, and it was cutting
+                // off the similar-songs endpoints: Navidrome builds that queue from the seed
+                // artist's similar artists and their top songs, so the socket can sit quiet for
+                // 10-20s before the first byte arrives.
+                connectTimeoutMillis = 15000
+                socketTimeoutMillis = 60000
             }
 
             engine {
