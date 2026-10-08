@@ -25,8 +25,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,10 +62,14 @@ import com.craftworks.music.R
 import com.craftworks.music.data.model.Screen
 import com.craftworks.music.data.model.id
 import com.craftworks.music.player.SongHelper
+import com.craftworks.music.ui.elements.dialogs.tv.ArtistBiographyDialog
 import com.craftworks.music.ui.elements.tv.TvAlbumCard
 import com.craftworks.music.ui.elements.tv.rememberTvFocusRestoreState
 import com.craftworks.music.ui.viewmodels.ArtistsScreenViewModel
 import kotlinx.coroutines.launch
+
+/** How much of the biography shows on this screen before the More button takes over. */
+private const val BiographyPreviewMaxLines = 4
 
 @Composable
 @Preview
@@ -83,6 +89,7 @@ fun TvArtistDetailsScreen(
     val artistAlbums = viewModel.artistAlbums.collectAsStateWithLifecycle().value
 
     val focusRestore = rememberTvFocusRestoreState()
+    var showBiographyDialog by remember { mutableStateOf(false) }
 
     AnimatedVisibility(
         visible = showLoading || artist == null,
@@ -155,12 +162,31 @@ fun TvArtistDetailsScreen(
                             overflow = TextOverflow.Ellipsis,
                         )
 
-                        // Biography
+                        // Biography, capped so a long one cannot push the albums off the screen.
+                        // The rest of it is behind the More button, which only appears when
+                        // there is something left to read.
+                        val biographyPreview = artist?.biography?.split("<a target")?.first().orEmpty()
+                        var biographyOverflows by remember(biographyPreview) {
+                            mutableStateOf(false)
+                        }
+
                         Text(
-                            text = artist?.biography?.split("<a target")?.first() ?: "",
+                            text = biographyPreview,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            maxLines = BiographyPreviewMaxLines,
+                            overflow = TextOverflow.Ellipsis,
+                            onTextLayout = { biographyOverflows = it.hasVisualOverflow },
                         )
+
+                        if (biographyOverflows) {
+                            OutlinedButton(
+                                onClick = { showBiographyDialog = true },
+                                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
+                            ) {
+                                Text(stringResource(R.string.action_more))
+                            }
+                        }
 
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -261,5 +287,13 @@ fun TvArtistDetailsScreen(
                 }
             }
         }
+    }
+
+    if (showBiographyDialog) {
+        ArtistBiographyDialog(
+            artistName = artist?.name.orEmpty(),
+            biography = artist?.biography.orEmpty(),
+            setShowDialog = { showBiographyDialog = it }
+        )
     }
 }
