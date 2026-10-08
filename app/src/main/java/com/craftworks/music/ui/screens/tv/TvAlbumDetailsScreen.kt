@@ -64,8 +64,10 @@ import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.craftworks.music.R
+import com.craftworks.music.data.model.LibraryType
 import com.craftworks.music.data.model.Screen
 import com.craftworks.music.data.model.favorite
+import com.craftworks.music.data.model.getProvider
 import com.craftworks.music.data.model.id
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
 import com.craftworks.music.player.SongHelper
@@ -152,7 +154,12 @@ fun TvAlbumDetails(
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(selectedAlbumImage.toString().replace("size=128", "size=500"))
+                        .data(currentAlbum[0].mediaMetadata.let { album ->
+                            // 240dp is ~480px on a 1080p TV; the card artwork passed in is only 300px
+                            album.extras?.getString("imageId")?.let { imageId ->
+                                album.getProvider()?.getImageUrl(imageId, LibraryType.ALBUM, 600)
+                            }
+                        } ?: selectedAlbumImage)
                         .diskCachePolicy(CachePolicy.DISABLED)
                         .placeholderMemoryCacheKey(selectedAlbumImage.toString())
                         .crossfade(true)
