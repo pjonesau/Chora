@@ -78,8 +78,11 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.craftworks.music.R
 import com.craftworks.music.data.model.ProviderFeature
+import com.craftworks.music.data.model.albumId
+import com.craftworks.music.data.model.artists
 import com.craftworks.music.data.model.id
 import com.craftworks.music.data.model.providerId
+import com.craftworks.music.ui.elements.dialogs.tv.GoToDialog
 import com.craftworks.music.data.repository.LyricsState
 import com.craftworks.music.managers.MediaProviderManager
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
@@ -114,6 +117,9 @@ fun TvNowPlaying(
     loadSimilarSongs: (suspend (MediaMetadata) -> List<MediaItem>)? = null,
     /** Called when the queue runs out and nothing is going to follow it. */
     onQueueEnded: () -> Unit = {},
+    /** Where the go-to button can send the player: the playing track's album and artist. */
+    onGoToAlbum: () -> Unit = {},
+    onGoToArtist: () -> Unit = {},
 ){
     var controlsVisible by remember { mutableStateOf(false) }
     val lyrics by LyricsState.lyrics.collectAsStateWithLifecycle()
@@ -132,6 +138,14 @@ fun TvNowPlaying(
 
     var showPlayQueue by remember { mutableStateOf(false) }
     val playQueueButtonRequester = remember { FocusRequester() }
+
+    var showGoToDialog by remember { mutableStateOf(false) }
+    val goToButtonRequester = remember { FocusRequester() }
+
+    // What the go-to button can offer for the track that is playing; a radio station has neither
+    // an album behind it nor artists to open.
+    val albumAvailable = metadata?.albumId != null
+    val artistAvailable = !metadata?.artists.isNullOrEmpty()
 
     // Auto-hide after 5 seconds of visibility
     val interactionFlow = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
@@ -539,6 +553,20 @@ fun TvNowPlaying(
                                     up = FocusRequester.Cancel
                                 }
                         )
+
+                        GoToButton(
+                            enabled = albumAvailable || artistAvailable,
+                            onClick = {
+                                showGoToDialog = true
+                                interactionFlow.tryEmit(Unit)
+                            },
+                            modifier = Modifier
+                                .size(IconButtonDefaults.SmallButtonSize)
+                                .focusRequester(goToButtonRequester)
+                                .focusProperties {
+                                    up = FocusRequester.Cancel
+                                }
+                        )
                     }
                 }
 
@@ -554,6 +582,26 @@ fun TvNowPlaying(
                     showPlayQueue = false
                     interactionFlow.tryEmit(Unit)
                     screenScope.launch { playQueueButtonRequester.requestFocus() }
+                }
+            )
+        }
+
+        if (showGoToDialog) {
+            GoToDialog(
+                albumAvailable = albumAvailable,
+                artistAvailable = artistAvailable,
+                onDismiss = {
+                    showGoToDialog = false
+                    interactionFlow.tryEmit(Unit)
+                    screenScope.launch { goToButtonRequester.requestFocus() }
+                },
+                onGoToAlbum = {
+                    showGoToDialog = false
+                    onGoToAlbum()
+                },
+                onGoToArtist = {
+                    showGoToDialog = false
+                    onGoToArtist()
                 }
             )
         }

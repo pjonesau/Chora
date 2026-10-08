@@ -398,6 +398,9 @@ val MediaMetadata.id: String?
 val MediaMetadata.providerId: String?
     get() = extras?.getString("providerId")
 
+val MediaMetadata.albumId: String?
+    get() = extras?.getString("albumId")
+
 val MediaMetadata.providerType: ProviderType?
     get() = extras?.getInt("providerType")?.let{ ProviderType(it) }
 

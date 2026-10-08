@@ -339,6 +339,30 @@ fun LyricsToggleButton(
     }
 }
 
+@Composable
+fun GoToButton(
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    IconButton(
+        onClick = { if (enabled) onClick() },
+        // Never disabled, like the lyrics toggle beside it: a disabled tv-material button leaves
+        // the focus group, so a track with no album or artist to open would shuffle the row.
+        modifier = modifier,
+        border = toggleButtonBorder(false),
+        colors = toggleButtonColors(false),
+    ) {
+        Icon(
+            imageVector = ImageVector.vectorResource(R.drawable.rounded_library_music_24),
+            contentDescription = stringResource(R.string.now_playing_go_to),
+            modifier = Modifier
+                .size(IconButtonDefaults.SmallIconSize)
+                .alpha(if (enabled) 1f else 0.4f),
+        )
+    }
+}
+
 
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
