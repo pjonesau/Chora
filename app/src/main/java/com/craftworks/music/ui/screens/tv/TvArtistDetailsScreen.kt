@@ -1,5 +1,6 @@
 package com.craftworks.music.ui.screens.tv
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -14,10 +15,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -59,15 +62,19 @@ import androidx.tv.material3.Text
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.craftworks.music.R
+import com.craftworks.music.data.model.ProviderFeature
 import com.craftworks.music.data.model.Screen
 import com.craftworks.music.data.model.displayYear
+import com.craftworks.music.data.model.getProvider
 import com.craftworks.music.data.model.id
 import com.craftworks.music.data.model.newestFirst
 import com.craftworks.music.player.SongHelper
 import com.craftworks.music.ui.elements.dialogs.tv.ArtistBiographyDialog
 import com.craftworks.music.ui.elements.tv.TvAlbumCard
+import com.craftworks.music.ui.elements.tv.TvArtistCard
 import com.craftworks.music.ui.elements.tv.rememberTvFocusRestoreState
 import com.craftworks.music.ui.viewmodels.ArtistsScreenViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 /** How much of the biography shows on this screen before the More button takes over. */
@@ -121,6 +128,8 @@ fun TvArtistDetailsScreen(
     ) {
         val coroutineScope = rememberCoroutineScope()
         val playRequester = remember { FocusRequester() }
+        val context = LocalContext.current
+        var radioLoading by remember { mutableStateOf(false) }
 
         LaunchedEffect(Unit) {
             focusRestore.restore(playRequester)
@@ -266,6 +275,90 @@ fun TvArtistDetailsScreen(
                                 )
                                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                                 Text(stringResource(R.string.action_shuffle))
+                            }
+
+                            val radioArtist = artist
+                            if (radioArtist != null &&
+                                radioArtist.getProvider()?.featureFlags?.contains(ProviderFeature.SIMILAR_SONGS) == true
+                            ) {
+                                OutlinedButton(
+                                    onClick = {
+                                        if (!radioLoading) {
+                                            coroutineScope.launch {
+                                                radioLoading = true
+                                                try {
+                                                    val songs = viewModel.getArtistRadioSongs(radioArtist.id)
+                                                    if (songs.isEmpty()) {
+                                                        Toast.makeText(context, R.string.radio_empty, Toast.LENGTH_SHORT).show()
+                                                    } else {
+                                                        SongHelper.play(songs, 0, mediaController)
+                                                        navHostController.navigate(Screen.NowPlayingLandscape) {
+                                                            launchSingleTop = true
+                                                        }
+                                                    }
+                                                } catch (e: CancellationException) {
+                                                    throw e
+                                                } catch (e: Exception) {
+                                                    // A failed fetch must not end the browse session.
+                                                    Toast.makeText(context, R.string.radio_empty, Toast.LENGTH_SHORT).show()
+                                                } finally {
+                                                    radioLoading = false
+                                                }
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+                                ) {
+                                    Icon(
+                                        ImageVector.vectorResource(R.drawable.rounded_radio),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(ButtonDefaults.IconSize),
+                                    )
+                                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                                    Text(stringResource(R.string.action_radio))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            /* Artists the provider considers similar, as a row rather than grid items so a long
+               list cannot push the discography off the screen. Fetched with the biography. */
+            val similarArtists = artist?.similarArtists.orEmpty()
+            if (similarArtists.isNotEmpty() &&
+                artist?.getProvider()?.featureFlags?.contains(ProviderFeature.SIMILAR_SONGS) == true
+            ) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Column(Modifier.focusGroup()) {
+                        Text(
+                            text = stringResource(R.string.artist_details_similar_artists),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                        LazyRow(
+                            modifier = Modifier.focusGroup(),
+                            horizontalArrangement = Arrangement.spacedBy(24.dp),
+                            contentPadding = PaddingValues(vertical = 8.dp)
+                        ) {
+                            items(similarArtists, key = { it.id }) { similar ->
+                                TvArtistCard(
+                                    artist = similar,
+                                    modifier = focusRestore.focusModifier("similar|" + similar.id),
+                                    onClick = {
+                                        navHostController.navigate(
+                                            Screen.ArtistDetails(
+                                                similar.id,
+                                                similar.imageUrl ?: similar.imageId?.let { imageId ->
+                                                    similar.getProvider()?.getImageUrl(imageId)
+                                                } ?: ""
+                                            )
+                                        )
+                                    }
+                                )
                             }
                         }
                     }

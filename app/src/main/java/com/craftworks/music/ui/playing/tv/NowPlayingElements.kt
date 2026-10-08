@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -44,6 +45,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -384,6 +386,34 @@ fun RepeatButton(player: Player, modifier: Modifier = Modifier) {
             contentDescription = "Repeat",
             modifier = Modifier.size(IconButtonDefaults.SmallIconSize),
         )
+    }
+}
+
+@androidx.annotation.OptIn(UnstableApi::class)
+@Composable
+fun SimilarSongsButton(loading: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    IconButton(
+        onClick = onClick,
+        // Never disabled: a disabled tv-material button leaves the focus group, so focus would
+        // jump to a neighbour in the middle of the request. The spinner is the feedback instead.
+        modifier = modifier,
+        enabled = true,
+        border = toggleButtonBorder(false),
+        colors = toggleButtonColors(false),
+    ) {
+        if (loading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(IconButtonDefaults.SmallIconSize),
+                strokeWidth = 2.dp,
+                color = androidx.tv.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            Icon(
+                imageVector = ImageVector.vectorResource(R.drawable.rounded_radio),
+                contentDescription = stringResource(R.string.action_radio),
+                modifier = Modifier.size(IconButtonDefaults.SmallIconSize),
+            )
+        }
     }
 }
 

@@ -163,6 +163,12 @@ interface SubsonicService {
         @Query("count") count: Int? = 50,
     ): SubsonicResponse
 
+    @GET("rest/getSimilarSongs.view")
+    suspend fun getSimilarSongs(
+        @Query("id") id: String,
+        @Query("count") count: Int? = 50,
+    ): SubsonicResponse
+
     @GET("rest/getSimilarSongs2.view")
     suspend fun getSimilarSongs2(
         @Query("id") id: String,

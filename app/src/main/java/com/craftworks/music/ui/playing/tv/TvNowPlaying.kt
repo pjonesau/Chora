@@ -3,6 +3,7 @@
 package com.craftworks.music.ui.playing.tv
 
 import android.view.KeyEvent
+import android.widget.Toast
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -40,6 +41,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,19 +73,25 @@ import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.craftworks.music.R
+import com.craftworks.music.data.model.ProviderFeature
 import com.craftworks.music.data.model.id
+import com.craftworks.music.data.model.providerId
 import com.craftworks.music.data.repository.LyricsState
+import com.craftworks.music.managers.MediaProviderManager
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
 import com.craftworks.music.managers.settings.OLEDProtectionMode
 import com.craftworks.music.player.ChoraMediaLibraryService
+import com.craftworks.music.player.SongHelper
 import com.craftworks.music.ui.elements.tv.TvHorizontalSongCard
 import com.craftworks.music.ui.playing.LyricsView
 import com.craftworks.music.ui.playing.dpToPx
 import com.craftworks.music.ui.screens.tv.requestFocusOnFirstGainingVisibility
 import com.gigamole.composefadingedges.marqueeHorizontalFadingEdges
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
 @kotlin.OptIn(FlowPreview::class)
@@ -93,10 +101,18 @@ fun TvNowPlaying(
     mediaController: MediaController? = null,
     iconColor: Color = Color.Black,
     metadata: MediaMetadata? = null,
-    onRefreshLyrics: () -> Unit = {}
+    onRefreshLyrics: () -> Unit = {},
+    /** Null hides the similar-songs button; the preview and unwired callers pass nothing. */
+    loadSimilarSongs: (suspend (MediaMetadata) -> List<MediaItem>)? = null,
 ){
     var controlsVisible by remember { mutableStateOf(false) }
     val lyrics by LyricsState.lyrics.collectAsStateWithLifecycle()
+
+    // The loading state and its scope live here rather than inside the AnimatedVisibility below:
+    // that content is disposed when the controls auto-hide, which would cancel a fetch in flight.
+    val context = LocalContext.current
+    val similarSongsScope = rememberCoroutineScope()
+    var similarSongsLoading by remember { mutableStateOf(false) }
 
     // Auto-hide after 5 seconds of visibility
     val interactionFlow = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
@@ -353,6 +369,45 @@ fun TvNowPlaying(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     ChoraMediaLibraryService.getInstance()?.player?.let {
+                        val similarSeed = metadata
+                        val similarLoader = loadSimilarSongs
+                        if (similarLoader != null && similarSeed != null &&
+                            similarSeed.mediaType != MediaMetadata.MEDIA_TYPE_RADIO_STATION &&
+                            MediaProviderManager.getProvider(similarSeed.providerId ?: "")
+                                ?.featureFlags?.contains(ProviderFeature.SIMILAR_SONGS) == true
+                        ) {
+                            SimilarSongsButton(
+                                loading = similarSongsLoading,
+                                onClick = {
+                                    if (!similarSongsLoading) {
+                                        similarSongsScope.launch {
+                                            similarSongsLoading = true
+                                            try {
+                                                val songs = similarLoader.invoke(similarSeed).orEmpty()
+                                                if (songs.isEmpty()) {
+                                                    Toast.makeText(context, R.string.radio_empty, Toast.LENGTH_SHORT).show()
+                                                } else {
+                                                    SongHelper.play(songs, 0, mediaController)
+                                                }
+                                            } catch (e: CancellationException) {
+                                                throw e
+                                            } catch (e: Exception) {
+                                                // A failed fetch must not take the TV down with it.
+                                                Toast.makeText(context, R.string.radio_empty, Toast.LENGTH_SHORT).show()
+                                            } finally {
+                                                similarSongsLoading = false
+                                            }
+                                        }
+                                    }
+                                },
+                                modifier = Modifier
+                                    .size(IconButtonDefaults.SmallButtonSize)
+                                    .focusProperties {
+                                        up = FocusRequester.Cancel
+                                    }
+                            )
+                        }
+
                         ShuffleButton(
                             it,
                             Modifier

@@ -11,6 +11,10 @@
     // Artist Details
     <string name="artist_details_discography">Discography</string>
     <string name="artist_details_appears_on">Appears on</string>
+    <string name="artist_details_similar_artists">Similar artists</string>
+
+    // Now Playing
+    <string name="radio_empty">No similar songs found</string>
 
     // Genres
     <string name="genre_song_album_count">%1$d songs · %2$d albums</string>

@@ -91,7 +91,8 @@ fun NowPlayingContent(
         TvNowPlaying(
             mediaController,
             iconTextColor,
-            metadata
+            metadata,
+            loadSimilarSongs = { viewModel.getSimilarMusic(it) }
         )
     } else if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE) {
         NowPlayingLandscape(

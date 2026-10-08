@@ -172,4 +172,11 @@ class NowPlayingViewModel @Inject constructor (
             songRepository.downloadSong(metadata, miscSettingsManager.downloadTemplateFlow.first())
         }
     }
+
+    /**
+     * Songs for the "similar music" radio seeded by [metadata], with the song's artist as a
+     * fallback seed. Empty when the provider has nothing similar to offer.
+     */
+    suspend fun getSimilarMusic(metadata: MediaMetadata): List<MediaItem> =
+        songRepository.getSimilarMusic(metadata)
 }

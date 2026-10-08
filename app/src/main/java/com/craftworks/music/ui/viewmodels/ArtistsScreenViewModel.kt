@@ -143,6 +143,10 @@ class ArtistsScreenViewModel @Inject constructor(
         return albumRepository.getAlbum(id) ?: emptyList()
     }
 
+    /** Songs for the artist's radio action. Empty when the provider has nothing to rank by. */
+    suspend fun getArtistRadioSongs(artistId: String): List<MediaItem> =
+        artistRepository.getArtistRadio(artistId)
+
     private var searchJob: Job? = null
     fun search(query: String) {
         if (query.isBlank())
