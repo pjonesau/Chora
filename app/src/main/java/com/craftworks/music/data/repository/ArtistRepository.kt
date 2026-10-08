@@ -30,6 +30,22 @@ class ArtistRepository @Inject constructor() {
         ))?.map { it.toMediaItem() } ?: listOf()
     }
 
+    /**
+     * Albums the artist is credited on but does not own: various-artists compilations and
+     * other guest spots. [ownAlbumIds] is the artist's own discography, which the provider's
+     * list also contains.
+     */
+    suspend fun getArtistAppearanceAlbums(
+        artistId: String,
+        ownAlbumIds: Set<String>
+    ): List<MediaItem> = coroutineScope {
+        MediaProviderManager.currentProvider.value
+            ?.getArtistCreditAlbums(artistId)
+            ?.filterNot { it.id in ownAlbumIds }
+            ?.map { it.toMediaItem() }
+            ?: listOf()
+    }
+
     suspend fun getArtistDetail(artistId: String): AlbumArtistDetailResponse? = coroutineScope {
         MediaProviderManager.currentProvider.value?.getAlbumArtistDetail(artistId)
     }

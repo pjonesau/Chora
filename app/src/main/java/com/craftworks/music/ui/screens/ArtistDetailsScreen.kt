@@ -24,7 +24,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -69,7 +69,9 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.craftworks.music.R
 import com.craftworks.music.data.model.Screen
+import com.craftworks.music.data.model.displayYear
 import com.craftworks.music.data.model.id
+import com.craftworks.music.data.model.newestFirst
 import com.craftworks.music.player.SongHelper
 import com.craftworks.music.ui.elements.ActionButtonType
 import com.craftworks.music.ui.elements.AlbumCard
@@ -97,7 +99,16 @@ fun ArtistDetails(
 
     val artist = viewModel.selectedArtist.collectAsStateWithLifecycle().value
     val artistAlbums = viewModel.artistAlbums.collectAsStateWithLifecycle().value
+    val artistAppearanceAlbums =
+        viewModel.artistAppearanceAlbums.collectAsStateWithLifecycle().value
     val actionButtons = viewModel.actionButtons.collectAsStateWithLifecycle(emptyList()).value
+
+    // Newest first, since the provider's own order is not guaranteed. Albums without a year
+    // sort last rather than under a "null" heading, which is what the old year grouping did.
+    val albumsByYearDesc = remember(artistAlbums) { artistAlbums.newestFirst() }
+    val appearancesByYearDesc = remember(artistAppearanceAlbums) {
+        artistAppearanceAlbums.newestFirst()
+    }
     val context = LocalContext.current
     val imageFadingEdge = Brush.verticalGradient(listOf(Color.Red.copy(0.75f), Color.Transparent))
 
@@ -106,6 +117,29 @@ fun ArtistDetails(
     var addToPlaylistSongs by remember { mutableStateOf<List<MediaItem>>(emptyList()) }
 
     val coroutineScope = rememberCoroutineScope()
+
+    val openAlbumDetails: (MediaItem) -> Unit = { album ->
+        navHostController.navigate(
+            Screen.AlbumDetails(
+                album.mediaMetadata.id ?: "",
+                album.mediaMetadata.artworkUri.toString()
+            )
+        ) {
+            launchSingleTop = true
+        }
+    }
+
+    val playAlbum: (MediaItem) -> Unit = { album ->
+        coroutineScope.launch {
+            val mediaItems = viewModel.getAlbum(album.mediaMetadata.id ?: "")
+            if (mediaItems.isNotEmpty())
+                SongHelper.play(
+                    mediaItems = mediaItems.subList(1, mediaItems.size),
+                    index = 0,
+                    mediaController = mediaController
+                )
+        }
+    }
 
     val getArtistSongs : suspend () -> List<MediaItem> = {
         artistAlbums.flatMap {
@@ -170,11 +204,6 @@ fun ArtistDetails(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             contentPadding = PaddingValues(12.dp, 0.dp, 12.dp, 12.dp),
         ) {
-            // Group songs by their source (Local or Navidrome)
-            val groupedAlbums =
-                artistAlbums.groupBy { it.mediaMetadata.recordingYear }
-                    .toSortedMap(compareByDescending { it })
-
             // Header
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Box(
@@ -328,51 +357,47 @@ fun ArtistDetails(
                 }
             }
 
-            /* Discography header */
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Text(
-                    text = stringResource(R.string.artist_details_discography),
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(top = 6.dp)
-                )
-            }
-
-            groupedAlbums.forEach { (groupName, albumsInGroup) ->
+            /* Discography. The year sits on each card where the artist name would be, so the
+               albums run together in one grid instead of a row per year. */
+            if (albumsByYearDesc.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Text(
-                        text = groupName.toString(),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier
-                            .padding(top = 12.dp)
+                        text = stringResource(R.string.artist_details_discography),
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(top = 6.dp)
                     )
                 }
-                itemsIndexed(albumsInGroup) { index, album ->
+
+                items(albumsByYearDesc) { album ->
                     AlbumCard(
                         album = album,
-                        onClick = {
-                            navHostController.navigate(
-                                Screen.AlbumDetails(
-                                    album.mediaMetadata.id ?: "",
-                                    album.mediaMetadata.artworkUri.toString()
-                                )
-                            ) {
-                                launchSingleTop = true
-                            }
-                        },
-                        onPlay = {
-                            coroutineScope.launch {
-                                val mediaItems = viewModel.getAlbum(album.mediaMetadata.id ?: "")
-                                if (mediaItems.isNotEmpty())
-                                    SongHelper.play(
-                                        mediaItems = mediaItems.subList(1, mediaItems.size),
-                                        index = 0,
-                                        mediaController = mediaController
-                                    )
-                            }
-                        }
+                        onClick = { openAlbumDetails(album) },
+                        onPlay = playAlbum,
+                        subtitle = album.mediaMetadata.displayYear
+                    )
+                }
+            }
+
+            /* Albums the artist only guests on. These keep the album artist name under the
+               title, since that is the part worth knowing here. */
+            if (appearancesByYearDesc.isNotEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Text(
+                        text = stringResource(R.string.artist_details_appears_on),
+                        color = MaterialTheme.colorScheme.onBackground,
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(top = 12.dp)
+                    )
+                }
+
+                items(appearancesByYearDesc) { album ->
+                    AlbumCard(
+                        album = album,
+                        onClick = { openAlbumDetails(album) },
+                        onPlay = playAlbum
                     )
                 }
             }

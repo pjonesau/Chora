@@ -27,6 +27,8 @@ fun TvAlbumCard(
     album: MediaItem,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
+    /** Line under the title. Defaults to the album artist. */
+    subtitle: String? = null,
 ) {
     val albumTitle = album.mediaMetadata.title?.toString() ?: ""
     val artistName = album.mediaMetadata.artist?.toString() ?: ""
@@ -60,7 +62,7 @@ fun TvAlbumCard(
         },
         subtitle = {
             Text(
-                text = artistName,
+                text = subtitle ?: artistName,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

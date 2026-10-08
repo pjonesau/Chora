@@ -60,7 +60,9 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.craftworks.music.R
 import com.craftworks.music.data.model.Screen
+import com.craftworks.music.data.model.displayYear
 import com.craftworks.music.data.model.id
+import com.craftworks.music.data.model.newestFirst
 import com.craftworks.music.player.SongHelper
 import com.craftworks.music.ui.elements.dialogs.tv.ArtistBiographyDialog
 import com.craftworks.music.ui.elements.tv.TvAlbumCard
@@ -87,6 +89,15 @@ fun TvArtistDetailsScreen(
     val showLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val artist = viewModel.selectedArtist.collectAsStateWithLifecycle().value
     val artistAlbums = viewModel.artistAlbums.collectAsStateWithLifecycle().value
+    val artistAppearanceAlbums =
+        viewModel.artistAppearanceAlbums.collectAsStateWithLifecycle().value
+
+    // Newest first, since the provider's own order is not guaranteed. Albums without a year
+    // sort last rather than under a "null" heading, which is what the old year grouping did.
+    val albumsByYearDesc = remember(artistAlbums) { artistAlbums.newestFirst() }
+    val appearancesByYearDesc = remember(artistAppearanceAlbums) {
+        artistAppearanceAlbums.newestFirst()
+    }
 
     val focusRestore = rememberTvFocusRestoreState()
     var showBiographyDialog by remember { mutableStateOf(false) }
@@ -114,9 +125,6 @@ fun TvArtistDetailsScreen(
         LaunchedEffect(Unit) {
             focusRestore.restore(playRequester)
         }
-        val groupedAlbums =
-            artistAlbums.groupBy { it.mediaMetadata.recordingYear }
-                .toSortedMap(compareByDescending { it })
 
         LazyVerticalGrid(
             modifier = Modifier
@@ -264,17 +272,47 @@ fun TvArtistDetailsScreen(
                 }
             }
 
-            groupedAlbums.forEach { (groupName, albumsInGroup) ->
+            /* Discography. The year sits on each card where the artist name would be, so the
+               albums run together in one grid instead of a row per year. */
+            if (albumsByYearDesc.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Text(
-                        text = groupName.toString(),
+                        text = stringResource(R.string.artist_details_discography),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold,
                         modifier = Modifier
                             .padding(vertical = 8.dp)
                     )
                 }
-                items(albumsInGroup) { album ->
+                items(albumsByYearDesc) { album ->
+                    TvAlbumCard(
+                        album = album,
+                        modifier = focusRestore.focusModifier("album|" + (album.mediaMetadata.id ?: album.mediaId)),
+                        onClick = {
+                            navHostController.navigate(Screen.AlbumDetails(album.mediaMetadata.id?:"", album.mediaMetadata.artworkUri.toString())) {
+                                launchSingleTop = true
+                            }
+                        },
+                        subtitle = album.mediaMetadata.displayYear
+                    )
+                }
+            }
+
+            /* Albums the artist only guests on. These keep the album artist name under the
+               title, since that is the part worth knowing here. */
+            if (appearancesByYearDesc.isNotEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Text(
+                        text = stringResource(R.string.artist_details_appears_on),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .padding(vertical = 8.dp)
+                    )
+                }
+                items(appearancesByYearDesc) { album ->
                     TvAlbumCard(
                         album = album,
                         modifier = focusRestore.focusModifier("album|" + (album.mediaMetadata.id ?: album.mediaId)),

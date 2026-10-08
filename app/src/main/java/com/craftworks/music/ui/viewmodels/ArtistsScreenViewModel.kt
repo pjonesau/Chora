@@ -1,5 +1,6 @@
 package com.craftworks.music.ui.viewmodels
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
@@ -8,6 +9,7 @@ import com.craftworks.music.data.model.LibraryType
 import com.craftworks.music.data.model.MediaModel
 import com.craftworks.music.data.model.MediaQuery
 import com.craftworks.music.data.model.SortOrder
+import com.craftworks.music.data.model.id
 import com.craftworks.music.data.repository.AlbumRepository
 import com.craftworks.music.data.repository.ArtistRepository
 import com.craftworks.music.data.repository.SongRepository
@@ -17,6 +19,7 @@ import com.craftworks.music.managers.settings.AppearanceSettingsManager
 import com.craftworks.music.managers.settings.LocalDataSettingsManager
 import com.craftworks.music.managers.settings.MiscSettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -50,6 +53,9 @@ class ArtistsScreenViewModel @Inject constructor(
 
     private val _artistAlbums = MutableStateFlow<List<MediaItem>>(emptyList())
     val artistAlbums: StateFlow<List<MediaItem>> = _artistAlbums.asStateFlow()
+
+    private val _artistAppearanceAlbums = MutableStateFlow<List<MediaItem>>(emptyList())
+    val artistAppearanceAlbums: StateFlow<List<MediaItem>> = _artistAppearanceAlbums.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -163,9 +169,29 @@ class ArtistsScreenViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Albums the artist is only credited on. Extra to the discography and only some providers
+     * can answer it, so a failure here leaves the artist page without its "appears on" section
+     * rather than taking the whole screen down with it.
+     */
+    private suspend fun getArtistAppearances(artistId: String): List<MediaItem> {
+        return try {
+            artistRepository.getArtistAppearanceAlbums(
+                artistId,
+                _artistAlbums.value.mapNotNull { it.mediaMetadata.id }.toSet()
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("ArtistsScreenViewModel", "Could not load albums featuring $artistId", e)
+            emptyList()
+        }
+    }
+
     fun loadArtistDetails(artistId: String) {
         _selectedArtist.value = _allArtists.value.firstOrNull { it.id == artistId }
         _artistAlbums.value = emptyList()
+        _artistAppearanceAlbums.value = emptyList()
 
         viewModelScope.launch {
             val loadingJob = launch {
@@ -187,6 +213,8 @@ class ArtistsScreenViewModel @Inject constructor(
                 } else {
                     _artistAlbums.value = artistDetail.albums.map { it.toMediaItem() }
                 }
+
+                _artistAppearanceAlbums.value = getArtistAppearances(artistId)
 
                 val artistInfo = infoDeferred.await()
                 _selectedArtist.value = _selectedArtist.value?.copy(

@@ -87,6 +87,15 @@ abstract class MediaProvider {
     abstract suspend fun getAlbumInfo(id: String): AlbumInfo
     abstract suspend fun getAlbumList(query: MediaQuery.AlbumListQuery): List<MediaModel.Album>
     abstract suspend fun getAlbumRadio(albumId: String, count: Int? = null): List<MediaModel.Song>
+
+    /**
+     * Every album the artist is credited on in any capacity: their own albums plus albums
+     * where they only appear on some of the tracks (guest spots, various-artists
+     * compilations). Callers subtract the artist's own albums to get the "appears on" set.
+     * Providers that cannot answer this return an empty list.
+     */
+    abstract suspend fun getArtistCreditAlbums(artistId: String): List<MediaModel.Album>
+
     abstract suspend fun getArtistList(query: MediaQuery.ArtistListQuery): List<MediaModel.Artist>
     abstract suspend fun getArtistRadio(artistId: String, count: Int? = null): List<MediaModel.Song>
     abstract suspend fun getDownloadUrl(id: String): String

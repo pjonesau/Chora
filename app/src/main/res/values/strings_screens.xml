@@ -10,6 +10,7 @@
 
     // Artist Details
     <string name="artist_details_discography">Discography</string>
+    <string name="artist_details_appears_on">Appears on</string>
 
     // Genres
     <string name="genre_song_album_count">%1$d songs · %2$d albums</string>

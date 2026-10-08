@@ -468,6 +468,14 @@ open class SubsonicMediaProvider : MediaProvider() {
         TODO("Not yet implemented")
     }
 
+    /**
+     * OpenSubsonic has no equivalent of this: getArtist returns the albums where the artist is
+     * the album artist, and search has no filter on the artists credited per track. Only the
+     * Navidrome native API exposes track credits, so Subsonic servers show the artist's own
+     * albums and nothing else.
+     */
+    override suspend fun getArtistCreditAlbums(artistId: String): List<MediaModel.Album> = emptyList()
+
     override suspend fun getArtistList(query: MediaQuery.ArtistListQuery): List<MediaModel.Artist> {
         TODO("Not yet implemented")
     }

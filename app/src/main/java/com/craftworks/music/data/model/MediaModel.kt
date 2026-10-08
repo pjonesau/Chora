@@ -404,6 +404,16 @@ val MediaMetadata.providerType: ProviderType?
 val MediaMetadata.favorite: Boolean?
     get() = extras?.getBoolean("userFavorite")
 
+/** Release year for display, or null when the provider has none. */
+val MediaMetadata.displayYear: String?
+    get() = recordingYear?.takeIf { it > 0 }?.toString()
+
+/** Albums newest first, then by name. Albums the provider left undated sort last. */
+fun List<MediaItem>.newestFirst(): List<MediaItem> = sortedWith(
+    compareByDescending<MediaItem> { it.mediaMetadata.recordingYear ?: Int.MIN_VALUE }
+        .thenBy { it.mediaMetadata.title?.toString() ?: "" }
+)
+
 @Suppress("UNCHECKED_CAST")
 val MediaMetadata.artists: List<MediaModel.Artist>?
     get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
