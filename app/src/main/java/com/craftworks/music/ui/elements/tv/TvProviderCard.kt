@@ -10,7 +10,9 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
@@ -19,7 +21,13 @@ import androidx.compose.ui.focus.FocusRequester.Companion.FocusRequesterFactory.
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -46,6 +54,7 @@ import com.craftworks.music.managers.MediaProviderManager
 
 @Composable
 private fun ProviderItem(
+    modifier: Modifier = Modifier,
     icon: Int,
     title: String,
     subtitle: String,
@@ -55,6 +64,7 @@ private fun ProviderItem(
     onLongClick: () -> Unit = { }
 ) {
     ListItem(
+        modifier = modifier,
         selected = enabled,
         scale = ListItemScale.None,
         leadingContent = {
@@ -220,13 +230,53 @@ fun TvLyricsProviderCard(
     onClick: () -> Unit,
     onLongClick: () -> Unit = { }
 ) {
+    val (mainFocus, reorderFocus) = remember { FocusRequester.createRefs() }
+    var mainIsFocused by remember { mutableStateOf(false) }
+
     ProviderItem(
+        modifier = Modifier
+            .focusRequester(mainFocus)
+            .onFocusChanged { mainIsFocused = it.isFocused }
+            // Directional focus search only ever looks at siblings, never at the children of
+            // the focused item, so the arrows inside this row cannot be reached by D-pad
+            // alone and have to be steered into by hand. The guard keeps this from also
+            // hijacking Right while an arrow already holds focus, which is what has to move
+            // between the two of them.
+            .onKeyEvent { keyEvent ->
+                if (keyEvent.type == KeyEventType.KeyDown &&
+                    keyEvent.key == Key.DirectionRight && mainIsFocused
+                ) {
+                    reorderFocus.requestFocus()
+                    true
+                } else false
+            },
         icon = provider.source.icon,
         title = provider.source.displayName,
         subtitle = subtitle,
         trailingContent = {
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                ReorderButton(R.drawable.arrow_upward_24px, "Move up", dimmed = isFirst, onClick = onMoveUp)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier
+                    .focusGroup()
+                    .focusRestorer()
+                    .focusRequester(reorderFocus)
+            ) {
+                ReorderButton(
+                    icon = R.drawable.arrow_upward_24px,
+                    description = "Move up",
+                    dimmed = isFirst,
+                    onClick = onMoveUp,
+                    // Left on the first arrow is the way back out of the pair; nothing
+                    // outside looks in, for the same reason Right needed steering.
+                    modifier = Modifier.onKeyEvent { keyEvent ->
+                        if (keyEvent.type == KeyEventType.KeyDown &&
+                            keyEvent.key == Key.DirectionLeft
+                        ) {
+                            mainFocus.requestFocus()
+                            true
+                        } else false
+                    }
+                )
                 ReorderButton(R.drawable.arrow_downward_24px, "Move down", dimmed = isLast, onClick = onMoveDown)
             }
         },
@@ -245,11 +295,12 @@ private fun ReorderButton(
     icon: Int,
     description: String,
     dimmed: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     IconButton(
         onClick = { if (!dimmed) onClick() },
-        modifier = Modifier.alpha(if (dimmed) 0.4f else 1f)
+        modifier = modifier.alpha(if (dimmed) 0.4f else 1f)
     ) {
         Icon(
             imageVector = ImageVector.vectorResource(icon),
