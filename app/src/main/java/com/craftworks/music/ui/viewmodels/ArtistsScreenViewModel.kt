@@ -192,10 +192,29 @@ class ArtistsScreenViewModel @Inject constructor(
         }
     }
 
+    /**
+     * The artist the details were last loaded for. Entering the artist page runs
+     * [loadArtistDetails] again with the same id - which is what happens every time the TV page
+     * comes back from an album or from Now Playing - and emptying the lists there takes the album
+     * that had focus, and the page's scroll position with it, off the screen before the refetch
+     * lands. Reloading the artist already on screen keeps what is already there.
+     */
+    private var loadedArtistId: String? = null
+
     fun loadArtistDetails(artistId: String) {
-        _selectedArtist.value = _allArtists.value.firstOrNull { it.id == artistId }
-        _artistAlbums.value = emptyList()
-        _artistAppearanceAlbums.value = emptyList()
+        val artistChanged = artistId != loadedArtistId
+        loadedArtistId = artistId
+
+        // The artist list entry is the bare one; the copy on screen also carries the biography
+        // and similar artists this fetch merges in, so keep it while reloading.
+        if (artistChanged || _selectedArtist.value?.id != artistId) {
+            _selectedArtist.value = _allArtists.value.firstOrNull { it.id == artistId }
+        }
+
+        if (artistChanged) {
+            _artistAlbums.value = emptyList()
+            _artistAppearanceAlbums.value = emptyList()
+        }
 
         viewModelScope.launch {
             val loadingJob = launch {
