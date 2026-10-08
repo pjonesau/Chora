@@ -136,9 +136,11 @@ fun TvNowPlaying(
     // Auto-hide after 5 seconds of visibility
     val interactionFlow = remember { MutableSharedFlow<Unit>(extraBufferCapacity = 1) }
 
-    val oledProtectionMode by AppearanceSettingsManager(LocalContext.current).oledProtectionMode.collectAsStateWithLifecycle(
+    val appearanceSettingsManager = remember { AppearanceSettingsManager(context) }
+    val oledProtectionMode by appearanceSettingsManager.oledProtectionMode.collectAsStateWithLifecycle(
         OLEDProtectionMode.OFF
     )
+    val lyricsVisible by appearanceSettingsManager.tvLyricsVisibleFlow.collectAsStateWithLifecycle(true)
 
     DisposableEffect(mediaController) {
         val listener = object : Player.Listener {
@@ -339,7 +341,12 @@ fun TvNowPlaying(
             }
 
             AnimatedVisibility(
-                visible = metadata?.mediaType != MediaMetadata.MEDIA_TYPE_RADIO_STATION && lyrics != null && oledProtectionMode != OLEDProtectionMode.MINIMAL,
+                // The lyrics-only mode is about the lyrics, so it wins over the toggle; the
+                // minimal mode hides them either way.
+                visible = metadata?.mediaType != MediaMetadata.MEDIA_TYPE_RADIO_STATION &&
+                        lyrics != null &&
+                        oledProtectionMode != OLEDProtectionMode.MINIMAL &&
+                        (lyricsVisible || oledProtectionMode == OLEDProtectionMode.LYRICS_ONLY),
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight(
@@ -512,6 +519,22 @@ fun TvNowPlaying(
                             modifier = Modifier
                                 .size(IconButtonDefaults.SmallButtonSize)
                                 .focusRequester(playQueueButtonRequester)
+                                .focusProperties {
+                                    up = FocusRequester.Cancel
+                                }
+                        )
+
+                        LyricsToggleButton(
+                            visible = lyricsVisible,
+                            enabled = lyrics != null &&
+                                    metadata?.mediaType != MediaMetadata.MEDIA_TYPE_RADIO_STATION &&
+                                    oledProtectionMode == OLEDProtectionMode.OFF,
+                            onClick = {
+                                screenScope.launch { appearanceSettingsManager.setTvLyricsVisible(!lyricsVisible) }
+                                interactionFlow.tryEmit(Unit)
+                            },
+                            modifier = Modifier
+                                .size(IconButtonDefaults.SmallButtonSize)
                                 .focusProperties {
                                     up = FocusRequester.Cancel
                                 }

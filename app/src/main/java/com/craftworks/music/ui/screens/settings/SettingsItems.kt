@@ -186,7 +186,8 @@ fun SettingsSlider(
     steps: Int,
     value: Float,
     minValue: Float, maxValue: Float,
-    onValueChange: (newValue: Float) -> Unit = {}
+    onValueChange: (newValue: Float) -> Unit = {},
+    onValueChangeFinished: () -> Unit = {}
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
@@ -232,6 +233,7 @@ fun SettingsSlider(
             onValueChange = {
                 onValueChange(it)
             },
+            onValueChangeFinished = onValueChangeFinished,
             valueRange = minValue..maxValue
         )
     }

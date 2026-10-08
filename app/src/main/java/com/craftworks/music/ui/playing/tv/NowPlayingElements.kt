@@ -36,6 +36,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -306,6 +307,34 @@ fun PlayQueueButton(
             imageVector = ImageVector.vectorResource(R.drawable.rounded_queue_music_24),
             contentDescription = stringResource(R.string.now_playing_queue),
             modifier = Modifier.size(IconButtonDefaults.SmallIconSize),
+        )
+    }
+}
+
+
+@Composable
+fun LyricsToggleButton(
+    visible: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    IconButton(
+        onClick = { if (enabled) onClick() },
+        // Never disabled: a disabled tv-material button leaves the focus group, so focus would
+        // jump to a neighbour whenever the track has no lyrics to show.
+        modifier = modifier,
+        border = toggleButtonBorder(visible),
+        colors = toggleButtonColors(visible),
+    ) {
+        Icon(
+            imageVector = ImageVector.vectorResource(
+                if (visible) R.drawable.lyrics_active else R.drawable.lyrics_inactive
+            ),
+            contentDescription = if (visible) "Hide lyrics" else "Show lyrics",
+            modifier = Modifier
+                .size(IconButtonDefaults.SmallIconSize)
+                .alpha(if (enabled) 1f else 0.4f),
         )
     }
 }

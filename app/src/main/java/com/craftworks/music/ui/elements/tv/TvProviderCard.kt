@@ -11,18 +11,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.FocusRequester.Companion.FocusRequesterFactory.component1
 import androidx.compose.ui.focus.FocusRequester.Companion.FocusRequesterFactory.component2
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Checkbox
@@ -30,19 +30,19 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.FilterChip
 import androidx.tv.material3.FilterChipDefaults
 import androidx.tv.material3.Icon
+import androidx.tv.material3.IconButton
 import androidx.tv.material3.ListItem
 import androidx.tv.material3.ListItemDefaults
 import androidx.tv.material3.ListItemScale
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.craftworks.music.R
+import com.craftworks.music.data.model.LyricsProvider
 import com.craftworks.music.data.providers.media.MediaProvider
 import com.craftworks.music.data.providers.media.local.LocalMediaProvider
 import com.craftworks.music.data.providers.media.subsonic.SubsonicMediaProvider
-import com.craftworks.music.data.repository.LyricsState
 import com.craftworks.music.managers.DataRefreshManager
 import com.craftworks.music.managers.MediaProviderManager
-import kotlinx.coroutines.launch
 
 @Composable
 private fun ProviderItem(
@@ -71,12 +71,14 @@ private fun ProviderItem(
                 modifier = Modifier
             )
         },
-        supportingContent = {
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        },
+        supportingContent = if (subtitle.isNotEmpty()) {
+            {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        } else null,
         trailingContent = {
             Row {
                 trailingContent()
@@ -208,45 +210,51 @@ fun TvProviderCard(provider: MediaProvider) {
 }
 
 @Composable
-fun LrcLibProviderCard(
-    url: String,
+fun TvLyricsProviderCard(
+    provider: LyricsProvider,
+    subtitle: String = "",
+    isFirst: Boolean = false,
+    isLast: Boolean = false,
+    onMoveUp: () -> Unit = { },
+    onMoveDown: () -> Unit = { },
+    onClick: () -> Unit,
     onLongClick: () -> Unit = { }
 ) {
-    val coroutineScope = rememberCoroutineScope()
-    val context = LocalContext.current
-
     ProviderItem(
-        icon = R.drawable.lrclib_logo,
-        title = "LRCLIB",
-        subtitle = url,
-        enabled = LyricsState.useLrcLib,
-        onClick = {
-            LyricsState.useLrcLib = !LyricsState.useLrcLib
-            coroutineScope.launch {
-                //TODO: FIX TV LYRICS PROVIDERS
-                //MediaProviderSettingsManager(context).setUseLrcLib(LyricsState.useLrcLib)
+        icon = provider.source.icon,
+        title = provider.source.displayName,
+        subtitle = subtitle,
+        trailingContent = {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                ReorderButton(R.drawable.arrow_upward_24px, "Move up", dimmed = isFirst, onClick = onMoveUp)
+                ReorderButton(R.drawable.arrow_downward_24px, "Move down", dimmed = isLast, onClick = onMoveDown)
             }
         },
+        enabled = provider.enabled,
+        onClick = onClick,
         onLongClick = onLongClick
     )
 }
 
-@Preview
+/**
+ * Dimmed rather than disabled at the ends of the list: a disabled tv-material IconButton cannot
+ * take focus, so the row would lose it the moment it arrived at the top.
+ */
 @Composable
-fun NetEaseProviderCard() {
-    val coroutineScope = rememberCoroutineScope()
-    val context = LocalContext.current
-    ProviderItem(
-        icon = R.drawable.netease_cloud_music,
-        title = "NetEase",
-        subtitle = "Lyrics",
-        enabled = LyricsState.useNetEase,
-        onClick = {
-            LyricsState.useNetEase = !LyricsState.useNetEase
-            coroutineScope.launch {
-                //TODO: FIX TV LYRICS PROVIDERS
-                //MediaProviderSettingsManager(context).setUseNetEase(LyricsState.useNetEase)
-            }
-        },
-    )
+private fun ReorderButton(
+    icon: Int,
+    description: String,
+    dimmed: Boolean,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = { if (!dimmed) onClick() },
+        modifier = Modifier.alpha(if (dimmed) 0.4f else 1f)
+    ) {
+        Icon(
+            imageVector = ImageVector.vectorResource(icon),
+            contentDescription = description,
+            modifier = Modifier.size(ListItemDefaults.IconSize)
+        )
+    }
 }

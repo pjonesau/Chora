@@ -96,8 +96,10 @@ data class LrcLibLyrics(
     val syncedLyrics: String? = "",
     val lyricsfile: String? = "",
     val trackName: String? = null,
+    val artistName: String? = null,
     val albumName: String? = null,
     val duration: Double? = null,
+    val hasWordSync: Boolean? = null,
 )
 
 // NetEase Lyrics
@@ -120,7 +122,12 @@ data class BiniLyricsResponse(
 @Serializable
 data class BiniLyricsResult(
     val timing_type: String,
-    val lyricsUrl: String
+    val lyricsUrl: String,
+    val track_name: String? = null,
+    val artist_name: String? = null,
+    val album_name: String? = null,
+    val duration: Int? = null,
+    val isrc: String? = null,
 )
 
 // Unison Lyrics
@@ -139,19 +146,29 @@ data class UnisonSearchResponse(
 data class UnisonLyricsData(
     val id: Int,
     val lyrics: String? = null,
-    val format: String
+    val format: String,
+    val duration: Int? = null,
+    val isrc: String? = null,
 )
 
 fun LrcLibLyrics.toLyrics(): Lyrics? {
     if (instrumental) return null
 
-    if (lyricsfile.toString() != "null") {
-        val settings = LoadSettings.builder().build()
-        val raw = Load(settings).loadFromString(lyricsfile) as? Map<*, *>
-            ?: throw IllegalArgumentException("Invalid YAML format")
+    // The lyrics file is an optional, additive field: absent, blank or malformed means "no lyrics
+    // file", not "no lyrics" - the synced and plain fields below still carry the record.
+    val yaml = lyricsfile
+        ?.takeIf { it.isNotBlank() && it != "null" }
+        ?.let { file ->
+            try {
+                Load(LoadSettings.builder().build()).loadFromString(file) as? Map<*, *>
+            } catch (e: Exception) {
+                null
+            }
+        }
 
-        val linesList = raw["lines"] as? List<*> ?: emptyList<Any>()
-        val plainText = raw["plain"] as? String
+    if (yaml != null) {
+        val linesList = yaml["lines"] as? List<*> ?: emptyList<Any>()
+        val plainText = yaml["plain"] as? String
         var wordSynced = false
 
         val lines: List<LyricsLine> = if (linesList.isNotEmpty()) {
@@ -201,7 +218,8 @@ fun LrcLibLyrics.toLyrics(): Lyrics? {
             lines = lines
         )
     }
-    else if (syncedLyrics != null) {
+
+    if (!syncedLyrics.isNullOrBlank()) {
         val lines = mutableListOf<LyricsLine>()
 
         syncedLyrics.lines().forEach { lyric ->
@@ -219,19 +237,20 @@ fun LrcLibLyrics.toLyrics(): Lyrics? {
             lines = lines
         )
     }
-    else if (plainLyrics != null) {
+    if (!plainLyrics.isNullOrBlank()) {
         return Lyrics(
             syncType = SyncType.NONE,
             source = LyricSource.LRCLIB,
             lines = listOf(
-            LyricsLine(
-                startMs = -1,
-                lines = listOf(Lyric(text = plainLyrics)))
+                LyricsLine(
+                    startMs = -1,
+                    lines = listOf(Lyric(text = plainLyrics))
+                )
             )
         )
     }
-    else
-        return null
+
+    return null
 }
 
 fun NeteaseLyricsResponse.toLyrics(): Lyrics? {
@@ -262,6 +281,11 @@ fun NeteaseLyricsResponse.toLyrics(): Lyrics? {
             }
         }
     }
+
+    // No timestamps parsed (no lrc, or one without any) means no usable lyrics - an empty
+    // SyncType.LINE result would otherwise win the line-synced tier over a real one.
+    if (originalMap.isEmpty())
+        return null
 
     return Lyrics(
         syncType = SyncType.LINE,

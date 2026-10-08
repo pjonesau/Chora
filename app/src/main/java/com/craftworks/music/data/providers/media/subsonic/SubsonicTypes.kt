@@ -510,7 +510,7 @@ data class SubsonicStructuredLyrics(
                 lines = listOf(
                     LyricsLine(
                         startMs = -1,
-                        lines = listOf(Lyric(text = line.fastJoinToString { it.value }))
+                        lines = listOf(Lyric(text = line.joinToString("\n") { it.value }))
                     )
                 )
             )
@@ -528,11 +528,15 @@ data class SubsonicStructuredLyrics(
                     else -> LyricsRole.BG
                 }
 
+                // The byte offsets are the server's and are not trusted: an empty line or an
+                // out-of-range offset must clamp here rather than throw out of the whole fetch.
+                val lineBytes = cLine.value.toByteArray(Charsets.UTF_8)
+                val lastByteIndex = (lineBytes.size - 1).coerceAtLeast(0)
+
                 val words = cLine.cue.mapIndexed { index, cue ->
-                    val lineBytes = cLine.value.toByteArray(Charsets.UTF_8)
-                    val cueByteEnd = cLine.cue.getOrNull(index + 1)?.byteStart?.minus(1) ?: (lineBytes.size - 1)
-                    val safeByteStart = cue.byteStart.coerceIn(0, lineBytes.size)
-                    val safeByteEnd = cueByteEnd.coerceIn(safeByteStart, lineBytes.size - 1)
+                    val cueByteEnd = cLine.cue.getOrNull(index + 1)?.byteStart?.minus(1) ?: lastByteIndex
+                    val safeByteStart = cue.byteStart.coerceIn(0, lastByteIndex)
+                    val safeByteEnd = cueByteEnd.coerceIn(safeByteStart, lastByteIndex)
 
                     val cueBytes = lineBytes.sliceArray(safeByteStart..safeByteEnd)
 
