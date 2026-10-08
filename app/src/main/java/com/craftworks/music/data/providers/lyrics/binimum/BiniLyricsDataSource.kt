@@ -42,12 +42,28 @@ import javax.inject.Singleton
 
 private const val UserAgent = "Chora - Navidrome Client (https://github.com/CraftWorksMC/Chora)"
 
+/**
+ * The BiniLyrics API has moved to lrc.red, which answers the same queries with the same JSON; the
+ * old binimum.org host 307s to it. Talk to the new host directly rather than pay the hop.
+ */
+private const val BaseUrl = "https://lrc.red/api/v1"
+
 @Singleton
 class BiniLyricsDataSource @Inject constructor(
     @ApplicationContext context: Context
 ) {
     @OptIn(InternalAPI::class)
     private val client = HttpClient(OkHttp) {
+        engine {
+            config {
+                // A moved API answers with a redirect, and without this the 307 comes back as the
+                // response itself - which reads here as "no lyrics", and is how the move above went
+                // unnoticed. Following them keeps the next move working as well.
+                followRedirects(true)
+                followSslRedirects(true)
+            }
+        }
+
         install(ContentNegotiation) {
             json(Json {
                 ignoreUnknownKeys = true
@@ -128,7 +144,7 @@ class BiniLyricsDataSource @Inject constructor(
         durationMs: Long?,
         durationToleranceSeconds: Int
     ): BiniLyricsResult? = try {
-        val results = client.get("https://lyrics-api.binimum.org/") {
+        val results = client.get(BaseUrl) {
             parameters.forEach { (name, value) -> value?.let { parameter(name, it) } }
 
             header(HttpHeaders.UserAgent, UserAgent)
