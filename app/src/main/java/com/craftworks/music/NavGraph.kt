@@ -44,6 +44,7 @@ import androidx.navigation.compose.navigation
 import androidx.navigation.toRoute
 import com.craftworks.music.data.model.Screen
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
+import com.craftworks.music.player.radioTitleExpiresInMs
 import com.craftworks.music.ui.playing.NowPlayingContent
 import com.craftworks.music.ui.playing.NowPlayingViewModel
 import com.craftworks.music.ui.playing.dpToPx
@@ -91,6 +92,8 @@ import com.craftworks.music.ui.viewmodels.HomeScreenViewModel
 import com.craftworks.music.ui.viewmodels.PlaylistScreenViewModel
 import com.craftworks.music.ui.viewmodels.RadioScreenViewModel
 import com.craftworks.music.ui.viewmodels.SongsScreenViewModel
+import com.craftworks.music.player.withRadioTitle
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -447,14 +450,21 @@ fun SetupNavGraph(
                 // Update metadata from mediaController.
                 LaunchedEffect(mediaController) {
                     if (mediaController?.currentMediaItem != null) {
-                        metadata = mediaController.currentMediaItem?.mediaMetadata
+                        metadata = mediaController.withRadioTitle(mediaController.currentMediaItem?.mediaMetadata)
                     }
                 }
                 DisposableEffect(mediaController) {
                     val listener = object : Player.Listener {
                         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                             super.onMediaItemTransition(mediaItem, reason)
-                            metadata = mediaController?.currentMediaItem?.mediaMetadata
+                            metadata = mediaController?.withRadioTitle(mediaController.currentMediaItem?.mediaMetadata)
+                        }
+
+                        // A radio stream announces each new song; songs ignore this (the item's own
+                        // metadata is what this screen shows for them).
+                        override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
+                            super.onMediaMetadataChanged(mediaMetadata)
+                            metadata = mediaController?.withRadioTitle(mediaController.currentMediaItem?.mediaMetadata)
                         }
                     }
 
@@ -463,6 +473,12 @@ fun SetupNavGraph(
                     onDispose {
                         mediaController?.removeListener(listener)
                     }
+                }
+
+                // A radio song title expires without any player event, so look again when it does.
+                LaunchedEffect(metadata) {
+                    delay(mediaController?.radioTitleExpiresInMs() ?: return@LaunchedEffect)
+                    metadata = mediaController?.withRadioTitle(mediaController.currentMediaItem?.mediaMetadata)
                 }
 
                 NowPlayingContent(

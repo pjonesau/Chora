@@ -111,7 +111,9 @@ import com.craftworks.music.data.model.Screen
 import com.craftworks.music.managers.MediaProviderManager
 import com.craftworks.music.managers.settings.AppTheme
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
+import com.craftworks.music.player.radioTitleExpiresInMs
 import com.craftworks.music.player.rememberManagedMediaController
+import com.craftworks.music.player.withRadioTitle
 import com.craftworks.music.ui.elements.dialogs.tv.OnboardingDialog
 import com.craftworks.music.ui.playing.NowPlayingContent
 import com.craftworks.music.ui.playing.NowPlayingMiniPlayer
@@ -122,6 +124,7 @@ import com.gigamole.composefadingedges.content.FadingEdgesContentType
 import com.gigamole.composefadingedges.content.scrollconfig.FadingEdgesScrollConfig
 import com.gigamole.composefadingedges.verticalFadingEdges
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -164,22 +167,28 @@ class MainActivity : ComponentActivity() {
                         }
 
                         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                            metadata = mediaItem?.mediaMetadata
+                            metadata = mediaController?.withRadioTitle(mediaItem?.mediaMetadata)
                             super.onMediaItemTransition(mediaItem, reason)
                         }
 
                         override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-                            metadata = mediaMetadata
+                            metadata = mediaController?.withRadioTitle(mediaMetadata)
                             super.onMediaMetadataChanged(mediaMetadata)
                         }
                     }
 
-                    metadata = mediaController?.mediaMetadata
+                    metadata = mediaController?.withRadioTitle(mediaController?.mediaMetadata)
                     mediaController?.addListener(listener)
 
                     onDispose {
                         mediaController?.removeListener(listener)
                     }
+                }
+
+                // A radio song title expires without any player event, so look again when it does.
+                LaunchedEffect(metadata) {
+                    delay(mediaController?.radioTitleExpiresInMs() ?: return@LaunchedEffect)
+                    metadata = mediaController?.withRadioTitle(mediaController?.mediaMetadata)
                 }
 
 
