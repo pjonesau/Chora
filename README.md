@@ -117,7 +117,9 @@ If you are looking for something well-tested, upstream's releases are the safe c
   playlist could be created from the TV at all. The list scrolls now.
 - **Release builds no longer crash on startup.** R8 stripped the no-arg constructor of a
   migration class, which `MigrationManager` builds reflectively; the release APK died in
-  `Application.onCreate` before any UI appeared.
+  `Application.onCreate` before any UI appeared. `MigrationManager` now names each
+  migration with a constructor reference instead of building it reflectively, so R8 can
+  see the constructor and the ProGuard keep rule that guarded it is gone.
 - **NetEase stops supplying words that are not the song's.** It writes a track's credits
   ("作词 : …") as ordinary lyric lines — and for a recording it has no lyrics for, the
   credits are all it returns — so one credit line could win the line-synced tier and sit

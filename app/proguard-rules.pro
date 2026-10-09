@@ -27,9 +27,5 @@
     <fields>;
 }
 
-# MigrationManager instantiates migrations reflectively with getDeclaredConstructor(), which R8
-# cannot see. Without this it strips the no-arg constructor and the first pending migration
-# crashes the app during Application.onCreate with NoSuchMethodException.
--keepclassmembers class * implements com.craftworks.music.migrations.Migration {
-    <init>();
-}
+# MigrationManager names each migration with a constructor reference rather than instantiating it
+# reflectively, so R8 can see the constructor and no keep rule is needed for it.
