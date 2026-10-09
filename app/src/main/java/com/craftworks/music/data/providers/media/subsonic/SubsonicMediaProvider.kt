@@ -797,7 +797,10 @@ open class SubsonicMediaProvider : MediaProvider() {
         position: Int?
     ) {
         try {
-            service.scrobble(id, position, submission)
+            // Subsonic's `time` is when the play happened, and Navidrome stores it as the play date
+            // that "recently played" sorts by. Sending the track position here dated every play to
+            // January 1970. A now-playing notice (submission = false) takes no time at all.
+            service.scrobble(id, if (submission) System.currentTimeMillis() else null, submission)
         }
         catch (e: Exception) {
             throw Exception("Failed to scrobble", e)
