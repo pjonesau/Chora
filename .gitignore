@@ -1,5 +1,8 @@
 *.iml
 .gradle
+# Gradle user home kept inside the workspace (GRADLE_USER_HOME), so sandboxed builds
+# never write outside it. Holds the wrapper distribution and the dependency cache.
+/.gradle-home/
 /local.properties
 .DS_Store
 /build
