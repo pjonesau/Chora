@@ -18,6 +18,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.ClientRequestException
+import io.ktor.client.plugins.ServerResponseException
 import io.ktor.client.plugins.cache.HttpCache
 import io.ktor.client.plugins.cache.storage.FileStorage
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -29,12 +30,14 @@ import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.parameter
+import io.ktor.client.statement.HttpResponse
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.appendPathSegments
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.utils.io.InternalAPI
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -89,18 +92,20 @@ class LrclibDataSource @Inject constructor(
         if (title == null) return@withContext null
 
         try {
-            val response = client.get(baseUrl) {
-                url {
-                    appendPathSegments("api", "get")
+            val response = retryingWhenBusy {
+                client.get(baseUrl) {
+                    url {
+                        appendPathSegments("api", "get")
+                    }
+
+                    parameter("artist_name", artist)
+                    parameter("track_name", title)
+                    parameter("album_name", album)
+                    parameter("duration", durationMs?.let { (it / 1000).toInt() })
+
+                    header(HttpHeaders.UserAgent, UserAgent)
+                    cacheHeader(ignoreCachedResponse)
                 }
-
-                parameter("artist_name", artist)
-                parameter("track_name", title)
-                parameter("album_name", album)
-                parameter("duration", durationMs?.let { (it / 1000).toInt() })
-
-                header(HttpHeaders.UserAgent, UserAgent)
-                cacheHeader(ignoreCachedResponse)
             }
 
             val record: LrcLibLyrics = response.body()
@@ -178,16 +183,18 @@ class LrclibDataSource @Inject constructor(
         durationToleranceSeconds: Int,
         ignoreCachedResponse: Boolean
     ): Lyrics? = try {
-        val results: List<LrcLibLyrics> = client.get(baseUrl) {
-            url {
-                appendPathSegments("api", "search")
+        val results: List<LrcLibLyrics> = retryingWhenBusy {
+            client.get(baseUrl) {
+                url {
+                    appendPathSegments("api", "search")
+                }
+
+                parameter("track_name", queryTitle)
+                artist?.let { parameter("artist_name", it) }
+
+                header(HttpHeaders.UserAgent, UserAgent)
+                cacheHeader(ignoreCachedResponse)
             }
-
-            parameter("track_name", queryTitle)
-            artist?.let { parameter("artist_name", it) }
-
-            header(HttpHeaders.UserAgent, UserAgent)
-            cacheHeader(ignoreCachedResponse)
         }.body()
 
         // The search covers every recording with that name, so the playing track's length does the
@@ -215,6 +222,31 @@ class LrclibDataSource @Inject constructor(
         null
     }
 }
+
+/**
+ * LRCLIB sheds load with a 503 ("The server is busy, please retry in a moment"), which would
+ * otherwise leave the track without lyrics until it is played again - nothing caches a failure.
+ * Its busy spells outlast the one second its `Retry-After` asks for, so back off 1, 2 then 4
+ * seconds (or longer when the server asks for more, up to 10) before giving up. A skip to the
+ * next track cancels the wait along with the rest of the fetch.
+ */
+private suspend fun retryingWhenBusy(request: suspend () -> HttpResponse): HttpResponse {
+    for (backoffMs in BusyRetryBackoffMs) {
+        try {
+            return request()
+        } catch (e: ServerResponseException) {
+            if (e.response.status != HttpStatusCode.ServiceUnavailable) throw e
+            val askedMs = e.response.headers[HttpHeaders.RetryAfter]?.toLongOrNull()?.times(1000) ?: 0
+            val waitMs = maxOf(backoffMs, askedMs.coerceAtMost(MaxBusyWaitMs))
+            Log.d("LRCLIB", "server busy - retrying in ${waitMs}ms")
+            delay(waitMs)
+        }
+    }
+    return request()
+}
+
+private val BusyRetryBackoffMs = listOf(1000L, 2000L, 4000L)
+private const val MaxBusyWaitMs = 10_000L
 
 private val bracketedPart = Regex("""\s*[(\[][^()\[\]]*[)\]]""")
 private val whitespaceRun = Regex("""\s+""")
