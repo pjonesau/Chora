@@ -70,6 +70,12 @@ fun TvRadioScreen(
         focusRestore.restore(focusRequester)
     }
 
+    // The TV has no pull-to-refresh, so ask again on every visit: a station added or given a logo
+    // in Navidrome's web UI would otherwise not show until the app restarts.
+    LaunchedEffect(Unit) {
+        viewModel.getRadioStations()
+    }
+
     LazyVerticalGrid(
         columns = GridCells.Fixed(5),
         modifier = Modifier

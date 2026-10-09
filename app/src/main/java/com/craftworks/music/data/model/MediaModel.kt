@@ -206,8 +206,14 @@ abstract class MediaModel
                 MediaMetadata.Builder()
                     .setStation(this.name)
                     .setArtist(this.name)
+                    // The station's logo when the server has one (Navidrome lets one be uploaded per
+                    // station); the bundled placeholder otherwise, so Now Playing and Android Auto
+                    // always have a picture. Station cards draw their own tile instead of the placeholder.
                     .setArtworkUri(
-                        ("android.resource://com.craftworks.music/" + R.drawable.radioplaceholder).toUri()
+                        this.imageId?.takeIf { it.isNotBlank() }
+                            ?.let { getProvider()?.getImageUrl(it, LibraryType.RADIO_STATION, 600)?.takeIf { url -> url.isNotEmpty() } }
+                            ?.toUri()
+                            ?: ("android.resource://com.craftworks.music/" + R.drawable.radioplaceholder).toUri()
                     )
                     .setIsPlayable(true)
                     .setIsBrowsable(false)
