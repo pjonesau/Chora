@@ -8,7 +8,7 @@ import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -61,7 +60,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
@@ -92,7 +90,6 @@ import com.craftworks.music.player.ChoraMediaLibraryService
 import com.craftworks.music.player.SongHelper
 import com.craftworks.music.ui.elements.tv.TvHorizontalSongCard
 import com.craftworks.music.ui.playing.LyricsView
-import com.craftworks.music.ui.playing.dpToPx
 import com.craftworks.music.ui.screens.tv.requestFocusOnFirstGainingVisibility
 import com.gigamole.composefadingedges.marqueeHorizontalFadingEdges
 import kotlinx.coroutines.CancellationException
@@ -194,10 +191,18 @@ fun TvNowPlaying(
         label = "Animated text color"
     )
 
-    val bottomPadding by animateIntAsState(
-        targetValue = if (controlsVisible && oledProtectionMode != OLEDProtectionMode.LYRICS_ONLY) dpToPx(64) else 0,
+    // The controls panel is about 200dp tall: with it showing, the track is laid out in the room
+    // above it, and the artwork gives up some height to fit.
+    val controlsShown = controlsVisible && oledProtectionMode != OLEDProtectionMode.LYRICS_ONLY
+    val bottomPadding by animateDpAsState(
+        targetValue = if (controlsShown) 208.dp else 0.dp,
         animationSpec = tween(600, 0, FastOutSlowInEasing),
-        label = "Move content up with controls visible"
+        label = "Make room for the controls"
+    )
+    val artworkHeight by animateDpAsState(
+        targetValue = if (controlsShown) 196.dp else 320.dp,
+        animationSpec = tween(600, 0, FastOutSlowInEasing),
+        label = "Shrink the artwork for the controls"
     )
 
     Box(
@@ -269,7 +274,7 @@ fun TvNowPlaying(
 
         Row (
             Modifier
-                .offset { IntOffset(0, -bottomPadding) }
+                .padding(bottom = bottomPadding)
                 .fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
@@ -286,7 +291,7 @@ fun TvNowPlaying(
                         imageCard = {
                             Box(
                                 Modifier
-                                    .height(320.dp)
+                                    .height(artworkHeight)
                                     .fillMaxWidth(),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -415,72 +420,41 @@ fun TvNowPlaying(
         ) {
             Column(
                 modifier = Modifier
-                    .widthIn(max = 480.dp)
+                    .widthIn(max = 560.dp)
                     .fillMaxWidth()
                     .wrapContentHeight()
-                    .focusGroup(),
+                    .focusGroup()
+                    .onKeyEvent { keyEvent ->
+                        if (keyEvent.type == KeyEventType.KeyDown) {
+                            if (keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BACK) {
+                                controlsVisible = false
+                                return@onKeyEvent true
+                            }
+                            interactionFlow.tryEmit(Unit)
+                        }
+                        false
+                    },
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // The playback controls, mirrored round the play button: two on each side.
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusGroup()
                         .onKeyEvent { keyEvent ->
-                            if (keyEvent.type == KeyEventType.KeyDown) {
-                                if (controlsVisible) {
-                                    if (keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_UP || keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_BACK) {
-                                        controlsVisible = false
-                                        return@onKeyEvent true
-                                    }
-                                    interactionFlow.tryEmit(Unit)
-                                }
+                            if (keyEvent.type == KeyEventType.KeyDown &&
+                                keyEvent.nativeKeyEvent.keyCode == KeyEvent.KEYCODE_DPAD_UP
+                            ) {
+                                controlsVisible = false
+                                return@onKeyEvent true
                             }
                             false
                         },
-                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    horizontalArrangement = Arrangement.spacedBy(20.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     ChoraMediaLibraryService.getInstance()?.player?.let {
-                        val similarSeed = metadata
-                        val similarLoader = loadSimilarSongs
-                        if (similarLoader != null && similarSeed != null &&
-                            similarSeed.mediaType != MediaMetadata.MEDIA_TYPE_RADIO_STATION &&
-                            MediaProviderManager.getProvider(similarSeed.providerId ?: "")
-                                ?.featureFlags?.contains(ProviderFeature.SIMILAR_SONGS) == true
-                        ) {
-                            SimilarSongsButton(
-                                loading = similarSongsLoading,
-                                onClick = {
-                                    if (!similarSongsLoading) {
-                                        screenScope.launch {
-                                            similarSongsLoading = true
-                                            try {
-                                                val songs = similarLoader.invoke(similarSeed).orEmpty()
-                                                if (songs.isEmpty()) {
-                                                    Toast.makeText(context, R.string.radio_empty, Toast.LENGTH_SHORT).show()
-                                                } else {
-                                                    SongHelper.play(songs, 0, mediaController)
-                                                }
-                                            } catch (e: CancellationException) {
-                                                throw e
-                                            } catch (e: Exception) {
-                                                // A failed fetch must not take the TV down with it.
-                                                Toast.makeText(context, R.string.radio_empty, Toast.LENGTH_SHORT).show()
-                                            } finally {
-                                                similarSongsLoading = false
-                                            }
-                                        }
-                                    }
-                                },
-                                modifier = Modifier
-                                    .size(IconButtonDefaults.SmallButtonSize)
-                                    .focusProperties {
-                                        up = FocusRequester.Cancel
-                                    }
-                            )
-                        }
-
                         ShuffleButton(
                             it,
                             Modifier
@@ -526,18 +500,64 @@ fun TvNowPlaying(
                                     up = FocusRequester.Cancel
                                 }
                         )
+                    }
+                }
+
+                if (metadata?.mediaType != MediaMetadata.MEDIA_TYPE_RADIO_STATION)
+                    PlaybackProgressSlider(iconTextColor, mediaController)
+
+                // What else can be done with the track, kept apart from the playback controls so
+                // neither row is lopsided. A row of its own also gets its own Up: back to the
+                // transport controls, where Up leaves the overlay.
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusGroup(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ChoraMediaLibraryService.getInstance()?.player?.let {
+                        val similarSeed = metadata
+                        val similarLoader = loadSimilarSongs
+                        if (similarLoader != null && similarSeed != null &&
+                            similarSeed.mediaType != MediaMetadata.MEDIA_TYPE_RADIO_STATION &&
+                            MediaProviderManager.getProvider(similarSeed.providerId ?: "")
+                                ?.featureFlags?.contains(ProviderFeature.SIMILAR_SONGS) == true
+                        ) {
+                            SimilarSongsButton(
+                                loading = similarSongsLoading,
+                                onClick = {
+                                    if (!similarSongsLoading) {
+                                        screenScope.launch {
+                                            similarSongsLoading = true
+                                            try {
+                                                val songs = similarLoader.invoke(similarSeed).orEmpty()
+                                                if (songs.isEmpty()) {
+                                                    Toast.makeText(context, R.string.radio_empty, Toast.LENGTH_SHORT).show()
+                                                } else {
+                                                    SongHelper.play(songs, 0, mediaController)
+                                                }
+                                            } catch (e: CancellationException) {
+                                                throw e
+                                            } catch (e: Exception) {
+                                                // A failed fetch must not take the TV down with it.
+                                                Toast.makeText(context, R.string.radio_empty, Toast.LENGTH_SHORT).show()
+                                            } finally {
+                                                similarSongsLoading = false
+                                            }
+                                        }
+                                    }
+                                },
+                                modifier = Modifier
+                            )
+                        }
 
                         PlayQueueButton(
                             onClick = {
                                 showPlayQueue = true
                                 interactionFlow.tryEmit(Unit)
                             },
-                            modifier = Modifier
-                                .size(IconButtonDefaults.SmallButtonSize)
-                                .focusRequester(playQueueButtonRequester)
-                                .focusProperties {
-                                    up = FocusRequester.Cancel
-                                }
+                            modifier = Modifier.focusRequester(playQueueButtonRequester)
                         )
 
                         LyricsToggleButton(
@@ -548,12 +568,7 @@ fun TvNowPlaying(
                             onClick = {
                                 screenScope.launch { appearanceSettingsManager.setTvLyricsVisible(!lyricsVisible) }
                                 interactionFlow.tryEmit(Unit)
-                            },
-                            modifier = Modifier
-                                .size(IconButtonDefaults.SmallButtonSize)
-                                .focusProperties {
-                                    up = FocusRequester.Cancel
-                                }
+                            }
                         )
 
                         FlagLyricsButton(
@@ -562,12 +577,7 @@ fun TvNowPlaying(
                             onClick = {
                                 LyricsFlags.flagCurrent(context, mediaController, screenScope)
                                 interactionFlow.tryEmit(Unit)
-                            },
-                            modifier = Modifier
-                                .size(IconButtonDefaults.SmallButtonSize)
-                                .focusProperties {
-                                    up = FocusRequester.Cancel
-                                }
+                            }
                         )
 
                         GoToButton(
@@ -576,18 +586,10 @@ fun TvNowPlaying(
                                 showGoToDialog = true
                                 interactionFlow.tryEmit(Unit)
                             },
-                            modifier = Modifier
-                                .size(IconButtonDefaults.SmallButtonSize)
-                                .focusRequester(goToButtonRequester)
-                                .focusProperties {
-                                    up = FocusRequester.Cancel
-                                }
+                            modifier = Modifier.focusRequester(goToButtonRequester)
                         )
                     }
                 }
-
-                if (metadata?.mediaType != MediaMetadata.MEDIA_TYPE_RADIO_STATION)
-                    PlaybackProgressSlider(iconTextColor, mediaController)
             }
         }
 
