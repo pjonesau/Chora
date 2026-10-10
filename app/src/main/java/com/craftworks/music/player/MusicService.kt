@@ -25,6 +25,7 @@ import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.ShuffleOrder
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaConstants
 import androidx.media3.session.MediaLibraryService
@@ -370,6 +371,21 @@ class ChoraMediaLibraryService : MediaLibraryService() {
                     PlaybackException.getErrorCodeName(error.errorCode),
                     Toast.LENGTH_SHORT
                 ).show()
+            }
+
+            override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+                // ExoPlayer's shuffle order is a random permutation that ignores where playback
+                // is, so the current track could land anywhere in it - and Next goes dim once it
+                // reaches the end, with songs never played. Start the order at the current track.
+                if (!shuffleModeEnabled || player.mediaItemCount < 2) return
+                val current = player.currentMediaItemIndex
+                val rest = (0 until player.mediaItemCount).filter { it != current }.shuffled()
+                (player as ExoPlayer).setShuffleOrder(
+                    ShuffleOrder.DefaultShuffleOrder(
+                        (listOf(current) + rest).toIntArray(),
+                        System.currentTimeMillis()
+                    )
+                )
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
