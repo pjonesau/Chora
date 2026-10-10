@@ -296,6 +296,7 @@ abstract class MediaModel
         val albumArtists: List<Artist> = listOf(),
         val albumId: String,
         val artistName: String,
+        val artistSortName: String? = null,
         val artists: List<Artist> = listOf(),
         val bitDepth: Int? = null,
         val bitRate: Int? = null,
@@ -383,7 +384,16 @@ abstract class MediaModel
                             putParcelableArrayList("artists", ArrayList(this@Song.artists))
                             putBoolean("userFavorite", this@Song.userFavorite ?: false)
                             putBoolean(METADATA_KEY_IS_EXPLICIT, this@Song.explicit == true)
-                            putString("lyricsArtist", if (this@Song.artists.isNotEmpty()) this@Song.artists[0].name else this@Song.artistName)
+                            // Navidrome fills `artists` with the album artists, so a compilation track
+                            // would be looked up as "Various Artists". The lyrics sources want whoever
+                            // performs the track; the album artist and the sort name are kept as
+                            // fallbacks for a search that finds nothing under it.
+                            putString("lyricsArtist",
+                                this@Song.participants?.get("artist")?.firstOrNull()?.name
+                                    ?: this@Song.artists.firstOrNull()?.name
+                                    ?: this@Song.artistName)
+                            putString("lyricsAlbumArtist", this@Song.artists.firstOrNull()?.name ?: this@Song.albumArtistName)
+                            this@Song.artistSortName?.let { putString("lyricsArtistSort", it) }
                             this@Song.gain?.track?.let{ putFloat("replayGain", it) }
                         }
                     )

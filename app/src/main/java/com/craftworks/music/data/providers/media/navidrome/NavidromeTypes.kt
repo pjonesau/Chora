@@ -236,6 +236,7 @@ data class NavidromeSong(
             albumId = this.albumId,
             albumArtistName = this.albumArtist,
             artistName = this.artist,
+            artistSortName = this.sortArtistName,
             artists = this.participants?.get("albumartist")?.map { MediaModel.Artist(
                 name = it.name,
                 id = it.id,
