@@ -152,6 +152,7 @@ fun TvNowPlaying(
     val oledProtectionMode by appearanceSettingsManager.oledProtectionMode.collectAsStateWithLifecycle(
         OLEDProtectionMode.OFF
     )
+    val lyricsFlagged by LyricsFlags.rememberFlagged(metadata, lyrics)
     val lyricsVisible by appearanceSettingsManager.tvLyricsVisibleFlow.collectAsStateWithLifecycle(true)
 
     DisposableEffect(mediaController) {
@@ -572,10 +573,11 @@ fun TvNowPlaying(
                         )
 
                         FlagLyricsButton(
+                            flagged = lyricsFlagged,
                             enabled = lyrics != null &&
                                     metadata?.mediaType != MediaMetadata.MEDIA_TYPE_RADIO_STATION,
                             onClick = {
-                                LyricsFlags.flagCurrent(context, mediaController, screenScope)
+                                LyricsFlags.toggleCurrent(context, mediaController, screenScope)
                                 interactionFlow.tryEmit(Unit)
                             }
                         )

@@ -9,12 +9,20 @@ import android.net.Uri
 import android.os.Build
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.platform.LocalContext
 import androidx.media3.common.MediaMetadata
 import androidx.media3.session.MediaController
 import com.craftworks.music.R
 import com.craftworks.music.data.repository.LyricsState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.craftworks.music.BuildConfig
@@ -39,6 +47,10 @@ import java.util.UUID
  *     adb shell content delete --uri content://com.craftworks.music.lyricsflags/flags --where "id='<id>'"
  *
  * The `json` column is the whole record; delete with no `--where` clears every flag.
+ *
+ * The file is also what the flag buttons read: a button shows as flagged while a record covers the
+ * lyrics on screen, and pressing it again removes that record. So a flag deleted over adb
+ * un-flags itself, and a track that later gets different lyrics reads as unflagged.
  */
 @Serializable
 data class LyricsFlag(
@@ -62,6 +74,11 @@ data class LyricsFlag(
     val syncType: String,
     /** The lyrics as shown: `[mm:ss.cc] text` per line, untimed lines without a stamp. */
     val lines: List<String>,
+    /**
+     * Fingerprint of [lines], so a flag stops counting once the track gets different lyrics from
+     * the same source. Flags written before this existed have none and match on source alone.
+     */
+    val linesHash: Int? = null,
 )
 
 object LyricsFlags {
@@ -98,29 +115,66 @@ object LyricsFlags {
                 val text = line.lines.joinToString(" / ") { it.text }
                 if (line.startMs < 0) text else "[${timestamp(line.startMs)}] $text"
             },
+            linesHash = linesHash(lyrics),
         )
     }
 
-    /** Flags the lyrics showing for the controller's current item, and says so. */
-    fun flagCurrent(context: Context, mediaController: MediaController?, scope: CoroutineScope) {
+    private fun linesHash(lyrics: Lyrics): Int = lyrics.lines.map { line ->
+        line.startMs.toString() + line.lines.joinToString(" / ") { it.text }
+    }.hashCode()
+
+    /** Whether [flag] was raised against these very lyrics of this very track. */
+    private fun covers(flag: LyricsFlag, metadata: MediaMetadata?, lyrics: Lyrics): Boolean =
+        flag.songId == metadata?.id &&
+                flag.providerId == metadata?.providerId &&
+                flag.source == lyrics.source.name &&
+                (flag.linesHash == null || flag.linesHash == linesHash(lyrics))
+
+    fun isFlagged(context: Context, metadata: MediaMetadata?, lyrics: Lyrics): Boolean =
+        metadata?.id != null && all(context).any { covers(it, metadata, lyrics) }
+
+    /** Bumped whenever a flag is added or removed, so screens showing the state re-read it. */
+    private val changes = MutableStateFlow(0)
+
+    /** Whether the lyrics showing for [metadata] have been flagged, kept up to date. */
+    @Composable
+    fun rememberFlagged(metadata: MediaMetadata?, lyrics: Lyrics?): State<Boolean> {
+        val appContext = LocalContext.current.applicationContext
+        val version by changes.collectAsState()
+        return produceState(false, metadata?.id, metadata?.providerId, lyrics, version) {
+            value = lyrics != null &&
+                    withContext(Dispatchers.IO) { isFlagged(appContext, metadata, lyrics) }
+        }
+    }
+
+    /**
+     * Flags the lyrics showing for the controller's current item, or - when they are flagged
+     * already - takes the flag off again. Says which it did.
+     */
+    fun toggleCurrent(context: Context, mediaController: MediaController?, scope: CoroutineScope) {
         val lyrics = LyricsState.lyrics.value ?: return
+        val metadata = mediaController?.mediaMetadata
         val flag = create(
-            mediaController?.mediaMetadata,
+            metadata,
             mediaController?.duration,
             mediaController?.currentPosition ?: 0L,
             lyrics
         )
         val appContext = context.applicationContext
         scope.launch(Dispatchers.IO) {
-            val saved = runCatching { add(appContext, flag) }
-                .onFailure { Log.e("Lyrics", "Could not save a lyrics flag", it) }
-                .isSuccess
+            val message = runCatching {
+                if (isFlagged(appContext, metadata, lyrics)) {
+                    remove(appContext) { covers(it, metadata, lyrics) }
+                    R.string.now_playing_lyrics_unflagged
+                } else {
+                    add(appContext, flag)
+                    R.string.now_playing_lyrics_flagged
+                }
+            }.onFailure { Log.e("Lyrics", "Could not update a lyrics flag", it) }
+                .getOrDefault(R.string.now_playing_lyrics_flag_failed)
+            changes.update { it + 1 }
             withContext(Dispatchers.Main) {
-                Toast.makeText(
-                    appContext,
-                    if (saved) R.string.now_playing_lyrics_flagged else R.string.now_playing_lyrics_flag_failed,
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(appContext, message, Toast.LENGTH_SHORT).show()
             }
         }
     }

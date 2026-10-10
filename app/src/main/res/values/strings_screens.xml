@@ -24,6 +24,9 @@
     <string name="now_playing_lyrics_flag_short">Flag</string>
     <string name="now_playing_lyrics_flag">Flag lyrics as wrong</string>
     <string name="now_playing_lyrics_flagged">Lyrics flagged</string>
+    <string name="now_playing_lyrics_unflagged">Flag removed</string>
+    <string name="now_playing_lyrics_flagged_short">Flagged</string>
+    <string name="now_playing_lyrics_unflag">Remove lyrics flag</string>
     <string name="now_playing_lyrics_flag_failed">Could not flag the lyrics</string>
 
     // Genres

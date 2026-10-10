@@ -353,14 +353,17 @@ fun LyricsView(
                         )
                         if (showFlagButton) {
                             val context = LocalContext.current
+                            val flagged by LyricsFlags.rememberFlagged(mediaController?.mediaMetadata, lyrics)
                             IconButton(
-                                onClick = { LyricsFlags.flagCurrent(context, mediaController, coroutineScope) },
+                                onClick = { LyricsFlags.toggleCurrent(context, mediaController, coroutineScope) },
                                 modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(
                                     imageVector = ImageVector.vectorResource(R.drawable.rounded_flag_24),
-                                    contentDescription = stringResource(R.string.now_playing_lyrics_flag),
-                                    tint = color.copy(alpha = 0.6f),
+                                    contentDescription = stringResource(
+                                        if (flagged) R.string.now_playing_lyrics_unflag else R.string.now_playing_lyrics_flag
+                                    ),
+                                    tint = if (flagged) MaterialTheme.colorScheme.primary else color.copy(alpha = 0.6f),
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
