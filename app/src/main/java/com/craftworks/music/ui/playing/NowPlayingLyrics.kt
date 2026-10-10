@@ -10,16 +10,20 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListItemInfo
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -43,6 +47,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -50,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import com.craftworks.music.R
+import com.craftworks.music.data.LyricsFlags
 import com.craftworks.music.data.model.LyricSource
 import com.craftworks.music.data.model.LyricsAgentType
 import com.craftworks.music.data.model.LyricsLine
@@ -77,6 +84,8 @@ fun LyricsView(
     mediaController: MediaController?,
     paddingValues: PaddingValues = PaddingValues(),
     onRefreshLyrics: () -> Unit = {},
+    // TV keeps its lyrics out of the focus order, so it flags from the controls row instead.
+    showFlagButton: Boolean = true,
 ) {
     val lyrics = LyricsState.lyrics.collectAsStateWithLifecycle().value ?: return
 
@@ -332,12 +341,31 @@ fun LyricsView(
                         .fillMaxSize()
                         .padding(paddingValues)
                 ) {
-                    LyricsSourceLabel(
-                        source = lyrics.source,
-                        mediaController = mediaController,
-                        color = color,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        LyricsSourceLabel(
+                            source = lyrics.source,
+                            mediaController = mediaController,
+                            color = color,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (showFlagButton) {
+                            val context = LocalContext.current
+                            IconButton(
+                                onClick = { LyricsFlags.flagCurrent(context, mediaController, coroutineScope) },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = ImageVector.vectorResource(R.drawable.rounded_flag_24),
+                                    contentDescription = stringResource(R.string.now_playing_lyrics_flag),
+                                    tint = color.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
 
                     // The list's item indices are lyric line indices, so nothing may be inserted
                     // into it - the source label lives here instead.

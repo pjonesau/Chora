@@ -20,6 +20,9 @@
     <string name="now_playing_album">Album</string>
     <string name="now_playing_artist">Artist</string>
     <string name="now_playing_lyrics_source">Lyrics from %1$s</string>
+    <string name="now_playing_lyrics_flag">Flag lyrics as wrong</string>
+    <string name="now_playing_lyrics_flagged">Lyrics flagged</string>
+    <string name="now_playing_lyrics_flag_failed">Could not flag the lyrics</string>
 
     // Genres
     <string name="genre_song_album_count">%1$d songs · %2$d albums</string>
