@@ -73,6 +73,20 @@ If you are looking for something well-tested, upstream's releases are the safe c
 - **TV quality of life**: the artist screen loads more artists as you scroll (it used to
   show only the first page), and the album details screen requests a 600px cover instead
   of upscaling the 300px card artwork.
+- **Lyrics sources can be reordered, and the length tolerance set.** The order breaks
+  ties between results of the same quality, and the tolerance — 0 to 30 s, 5 s by
+  default — is what a downloaded candidate's length is judged against. Both live under a
+  *Lyrics Providers* entry in Settings; on TV that screen moved out of the Media
+  Providers tabs, where it was the second tab nobody would look in, to match the phone.
+  On TV the sources carry up/down arrows and the tolerance a pair of buttons, there
+  being no drag. Unison ships switched off, upgrades included, with the toggle turning
+  it back on.
+- **Now Playing credits the source its lyrics came from**, so a source that keeps
+  returning the wrong recording can be spotted, and demoted or turned off.
+- **The TV player can hide its lyrics pane**, from a button in the transport row that
+  remembers the choice, and **open the playing track's album or artist** from the same
+  row. The go-to button offers the two screens on top of the player, so Back returns to
+  the music; it dims when there is nothing to open, as on a radio station.
 
 ### Fixes
 
@@ -104,6 +118,29 @@ If you are looking for something well-tested, upstream's releases are the safe c
 - **Release builds no longer crash on startup.** R8 stripped the no-arg constructor of a
   migration class, which `MigrationManager` builds reflectively; the release APK died in
   `Application.onCreate` before any UI appeared.
+- **NetEase stops supplying words that are not the song's.** It writes a track's credits
+  ("作词 : …") as ordinary lyric lines — and for a recording it has no lyrics for, the
+  credits are all it returns — so one credit line could win the line-synced tier and sit
+  on screen as a header with no song under it. Its search is loose, too: an instrumental
+  ("Back to the Future", The Outatime Orchestra) was matched to a same-length Chinese pop
+  song that merely shared an album name, and that song's lyrics were shown for it.
+  Credits and blank lines are dropped, a candidate agreeing with the track on neither its
+  name nor its artist is discarded, and a payload of nothing but credits counts as no
+  lyrics.
+- **BiniLyrics works again.** The service has moved to lrc.red and the old host answers
+  with a redirect, which the client treated as "no lyrics" — silently, for every track.
+- **LRCLIB finds titles that carry a version suffix.** Its search matches the track name
+  literally, so "Total Eclipse of the Heart (New radio edit mix)" found nothing even
+  though the recording was in the database, and the exact-signature lookup 404s for the
+  same reason. An empty search is repeated once with the bracketed parts dropped.
+- **TV settings that used sliders now have buttons.** A material3 slider cannot be
+  steered from a remote at all — its own arrow-key handling takes the presses before the
+  screen's does — so both the lyrics tolerance and the scrobble percentage were visible
+  and impossible to change. The same copy-and-paste had also left the TV's mobile-data
+  bitrate row labelled "Wi-Fi" and opening the Wi-Fi dialog.
+- **D-pad focus can reach the lyrics reorder arrows on TV.** They sit inside a row that
+  is itself focusable, and directional focus search never moves into the children of the
+  focused item, so Right had to be routed onto them by hand, and Left back off them.
 
 ### Build
 
