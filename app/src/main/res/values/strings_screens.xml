@@ -20,6 +20,8 @@
     <string name="now_playing_album">Album</string>
     <string name="now_playing_artist">Artist</string>
     <string name="now_playing_lyrics_source">Lyrics from %1$s</string>
+    <string name="now_playing_lyrics">Lyrics</string>
+    <string name="now_playing_lyrics_flag_short">Flag</string>
     <string name="now_playing_lyrics_flag">Flag lyrics as wrong</string>
     <string name="now_playing_lyrics_flagged">Lyrics flagged</string>
     <string name="now_playing_lyrics_flag_failed">Could not flag the lyrics</string>

@@ -11,7 +11,9 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -292,23 +294,61 @@ internal fun NextSongButton(player: Player, modifier: Modifier = Modifier) {
 }
 
 
+/**
+ * A secondary action of the Now Playing screen: an icon with its label, in a pill. These sit in
+ * their own row beneath the transport controls, so the labels are what tell them apart from the
+ * round playback buttons above. [dimmed] greys the pill out without disabling it - a disabled
+ * tv-material button leaves the focus group, so focus would jump to a neighbour whenever it
+ * became unusable.
+ */
+@Composable
+private fun TvActionButton(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    active: Boolean = false,
+    dimmed: Boolean = false,
+    leading: (@Composable () -> Unit)? = null,
+) {
+    Button(
+        onClick = { if (!dimmed) onClick() },
+        modifier = modifier.height(40.dp),
+        shape = ButtonDefaults.shape(CircleShape),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
+        border = toggleButtonBorder(active),
+        colors = toggleButtonColors(active),
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.alpha(if (dimmed) 0.4f else 1f),
+        ) {
+            if (leading != null) {
+                leading()
+            } else {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(IconButtonDefaults.SmallIconSize),
+                )
+            }
+            Text(text = label, maxLines = 1, style = androidx.tv.material3.MaterialTheme.typography.labelLarge)
+        }
+    }
+}
+
 @Composable
 fun PlayQueueButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    IconButton(
+    TvActionButton(
+        icon = ImageVector.vectorResource(R.drawable.rounded_queue_music_24),
+        label = stringResource(R.string.now_playing_queue),
         onClick = onClick,
         modifier = modifier,
-        border = toggleButtonBorder(false),
-        colors = toggleButtonColors(false),
-    ) {
-        Icon(
-            imageVector = ImageVector.vectorResource(R.drawable.rounded_queue_music_24),
-            contentDescription = stringResource(R.string.now_playing_queue),
-            modifier = Modifier.size(IconButtonDefaults.SmallIconSize),
-        )
-    }
+    )
 }
 
 
@@ -319,24 +359,16 @@ fun LyricsToggleButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    IconButton(
-        onClick = { if (enabled) onClick() },
-        // Never disabled: a disabled tv-material button leaves the focus group, so focus would
-        // jump to a neighbour whenever the track has no lyrics to show.
+    TvActionButton(
+        icon = ImageVector.vectorResource(
+            if (visible) R.drawable.lyrics_active else R.drawable.lyrics_inactive
+        ),
+        label = stringResource(R.string.now_playing_lyrics),
+        onClick = onClick,
         modifier = modifier,
-        border = toggleButtonBorder(visible),
-        colors = toggleButtonColors(visible),
-    ) {
-        Icon(
-            imageVector = ImageVector.vectorResource(
-                if (visible) R.drawable.lyrics_active else R.drawable.lyrics_inactive
-            ),
-            contentDescription = if (visible) "Hide lyrics" else "Show lyrics",
-            modifier = Modifier
-                .size(IconButtonDefaults.SmallIconSize)
-                .alpha(if (enabled) 1f else 0.4f),
-        )
-    }
+        active = visible && enabled,
+        dimmed = !enabled,
+    )
 }
 
 @Composable
@@ -345,22 +377,13 @@ fun FlagLyricsButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    IconButton(
-        onClick = { if (enabled) onClick() },
-        // Never disabled, like the lyrics toggle beside it, so focus stays put on a track
-        // without lyrics.
+    TvActionButton(
+        icon = ImageVector.vectorResource(R.drawable.rounded_flag_24),
+        label = stringResource(R.string.now_playing_lyrics_flag_short),
+        onClick = onClick,
         modifier = modifier,
-        border = toggleButtonBorder(false),
-        colors = toggleButtonColors(false),
-    ) {
-        Icon(
-            imageVector = ImageVector.vectorResource(R.drawable.rounded_flag_24),
-            contentDescription = stringResource(R.string.now_playing_lyrics_flag),
-            modifier = Modifier
-                .size(IconButtonDefaults.SmallIconSize)
-                .alpha(if (enabled) 1f else 0.4f),
-        )
-    }
+        dimmed = !enabled,
+    )
 }
 
 @Composable
@@ -369,22 +392,13 @@ fun GoToButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    IconButton(
-        onClick = { if (enabled) onClick() },
-        // Never disabled, like the lyrics toggle beside it: a disabled tv-material button leaves
-        // the focus group, so a track with no album or artist to open would shuffle the row.
+    TvActionButton(
+        icon = ImageVector.vectorResource(R.drawable.rounded_library_music_24),
+        label = stringResource(R.string.now_playing_go_to),
+        onClick = onClick,
         modifier = modifier,
-        border = toggleButtonBorder(false),
-        colors = toggleButtonColors(false),
-    ) {
-        Icon(
-            imageVector = ImageVector.vectorResource(R.drawable.rounded_library_music_24),
-            contentDescription = stringResource(R.string.now_playing_go_to),
-            modifier = Modifier
-                .size(IconButtonDefaults.SmallIconSize)
-                .alpha(if (enabled) 1f else 0.4f),
-        )
-    }
+        dimmed = !enabled,
+    )
 }
 
 
@@ -463,29 +477,23 @@ fun RepeatButton(player: Player, modifier: Modifier = Modifier) {
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun SimilarSongsButton(loading: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    IconButton(
+    // Never disabled, so focus stays put in the middle of the request; the spinner is the
+    // feedback instead.
+    TvActionButton(
+        icon = ImageVector.vectorResource(R.drawable.rounded_radio),
+        label = stringResource(R.string.action_radio),
         onClick = onClick,
-        // Never disabled: a disabled tv-material button leaves the focus group, so focus would
-        // jump to a neighbour in the middle of the request. The spinner is the feedback instead.
         modifier = modifier,
-        enabled = true,
-        border = toggleButtonBorder(false),
-        colors = toggleButtonColors(false),
-    ) {
-        if (loading) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(IconButtonDefaults.SmallIconSize),
-                strokeWidth = 2.dp,
-                color = androidx.tv.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        } else {
-            Icon(
-                imageVector = ImageVector.vectorResource(R.drawable.rounded_radio),
-                contentDescription = stringResource(R.string.action_radio),
-                modifier = Modifier.size(IconButtonDefaults.SmallIconSize),
-            )
-        }
-    }
+        leading = if (loading) {
+            {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(IconButtonDefaults.SmallIconSize),
+                    strokeWidth = 2.dp,
+                    color = androidx.tv.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else null,
+    )
 }
 
 /**
