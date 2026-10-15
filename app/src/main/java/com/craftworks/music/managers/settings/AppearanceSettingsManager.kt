@@ -163,7 +163,7 @@ class AppearanceSettingsManager @Inject constructor(
         val defaultValue = listOf(
             BottomNavItem(context.getString(R.string.nav_home), R.drawable.rounded_home_24, Screen.Home),
             BottomNavItem(context.getString(R.string.nav_albums), R.drawable.rounded_library_music_24, Screen.Albums),
-            BottomNavItem(context.getString(R.string.nav_songs), R.drawable.round_music_note_24, Screen.Songs),
+            BottomNavItem(context.getString(R.string.nav_genres), R.drawable.rounded_genre_24, Screen.Genres),
             BottomNavItem(context.getString(R.string.nav_artists), R.drawable.rounded_artist_24, Screen.Artists),
             BottomNavItem(context.getString(R.string.nav_radios), R.drawable.rounded_radio, Screen.Radios),
             BottomNavItem(context.getString(R.string.nav_playlists), R.drawable.placeholder, Screen.Playlists)

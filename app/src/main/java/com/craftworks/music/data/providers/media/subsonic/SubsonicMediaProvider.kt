@@ -73,6 +73,11 @@ open class SubsonicMediaProvider : MediaProvider() {
             PlaylistListSort.SONG_COUNT to { it.songCount },
             PlaylistListSort.UPDATED_AT to { it.changed },
         )
+        private val GENRE_SORT_BINDING = mapOf<GenreListSort, (MediaModel.Genre) -> Comparable<*>?>(
+            GenreListSort.ALBUM_COUNT to { it.albumCount ?: 0 },
+            GenreListSort.NAME to { it.name },
+            GenreListSort.SONG_COUNT to { it.songCount ?: 0 },
+        )
     }
     override val providerIcon: Int
         get() = R.drawable.s_m_opensubsonic
@@ -89,7 +94,8 @@ open class SubsonicMediaProvider : MediaProvider() {
         ProviderFeature.FAVORITES,
         ProviderFeature.INTERNET_RADIO,
         ProviderFeature.PLAYLISTS,
-        ProviderFeature.RATINGS
+        ProviderFeature.RATINGS,
+        ProviderFeature.GENRES
     )
 
     @Transient
@@ -123,9 +129,16 @@ open class SubsonicMediaProvider : MediaProvider() {
     override val supportArtistSortOrder: Boolean = true
 
     @Transient
-    override val supportedGenreSort: List<GenreListSort> = listOf(GenreListSort.NAME)
+    override val supportedGenreSort: List<GenreListSort> = listOf(
+        GenreListSort.ALBUM_COUNT,
+        GenreListSort.NAME,
+        GenreListSort.SONG_COUNT,
+    )
+
+    // getGenres returns every genre in one response, so the sorting below is local and
+    // both directions cost nothing.
     @Transient
-    override val supportGenreSortOrder: Boolean = false
+    override val supportGenreSortOrder: Boolean = true
 
     @Transient
     override val supportedPlaylistSort: List<PlaylistListSort> = listOf(
@@ -422,6 +435,15 @@ open class SubsonicMediaProvider : MediaProvider() {
         if (query.favorite == true)
             type = "starred"
 
+        // Subsonic only applies the genre parameter when type is byGenre; with any other type
+        // the server ignores it and returns the whole library, which looks plausible and is
+        // completely wrong. Navidrome reads "genre" only inside case "byGenre"
+        // (server/subsonic/album_lists.go). Filtering by genre therefore overrides the
+        // requested sort, which is why the genre details screen offers no sort control.
+        val genre = query.genreIds?.firstOrNull()?.let { MediaModel.Genre.filterValue(it) }
+        if (genre != null)
+            type = "byGenre"
+
         val res = try {
             service.getAlbumList(
                 type = type,
@@ -429,7 +451,7 @@ open class SubsonicMediaProvider : MediaProvider() {
                 offset = query.startIndex,
                 fromYear = fromYear,
                 toYear = toYear,
-                genre = query.genreIds?.firstOrNull(),
+                genre = genre,
                 musicFolderId = query.musicFolderId?.map { it.toInt() } ?: data.libraries.filter { it.second }.map { it.first.id.toInt() },
             )
         } catch (e: Exception) {
@@ -466,7 +488,28 @@ open class SubsonicMediaProvider : MediaProvider() {
     }
 
     override suspend fun getGenreList(query: MediaQuery.GenreListQuery): List<MediaModel.Genre> {
-        TODO("Not yet implemented")
+        val res = try {
+            service.getGenres()
+        } catch (e: Exception) {
+            throw Exception("Failed to get genre list", e)
+        }
+
+        // getGenres takes no parameters and returns every genre, so both the search filter
+        // and the sort are applied here rather than by the server.
+        val genres = res.subsonicResponse.genres?.genre?.map { it.toMediaModel() } ?: emptyList()
+
+        return PagingUtils.sortAndPaginate(
+            items = query.searchTerm?.takeIf { it.isNotBlank() }
+                ?.let { term -> genres.filter { it.name.contains(term, ignoreCase = true) } }
+                ?: genres,
+            limit = query.limit,
+            startIndex = query.startIndex,
+            // Without this, paginate returns the whole list for any startIndex of 0 and
+            // the requested limit is silently ignored.
+            allowMoreThanLimit = false,
+            sortBy = GENRE_SORT_BINDING[query.sortBy] ?: { it.name },
+            sortOrder = query.sortOrder
+        )
     }
 
     override suspend fun getImageRequest(
@@ -597,7 +640,7 @@ open class SubsonicMediaProvider : MediaProvider() {
         if (query.genreIds?.any()?:false) {
             return service.getSongsByGenre(
                 count = query.limit,
-                genre = query.genreIds[0],
+                genre = MediaModel.Genre.filterValue(query.genreIds[0]),
                 musicFolderId = query.musicFolderId?.map { it.toInt() } ?: data.libraries.filter { it.second }.map { it.first.id.toInt() },
                 offset = query.startIndex
             ).subsonicResponse.songsByGenre?.song?.map { it.toMediaModel(this.id) } ?: emptyList()

@@ -1,0 +1,7 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:height="24dp" android:tint="#FFFFFF" android:viewportHeight="960" android:viewportWidth="960" android:width="24dp">
+    <!-- A 2x2 grid of rounded tiles, matching the collage a genre card shows. -->
+    <path android:fillColor="@android:color/white" android:pathData="M180,120 h220 a60,60 0 0 1 60,60 v220 a60,60 0 0 1 -60,60 h-220 a60,60 0 0 1 -60,-60 v-220 a60,60 0 0 1 60,-60 z"/>
+    <path android:fillColor="@android:color/white" android:pathData="M560,120 h220 a60,60 0 0 1 60,60 v220 a60,60 0 0 1 -60,60 h-220 a60,60 0 0 1 -60,-60 v-220 a60,60 0 0 1 60,-60 z"/>
+    <path android:fillColor="@android:color/white" android:pathData="M180,520 h220 a60,60 0 0 1 60,60 v220 a60,60 0 0 1 -60,60 h-220 a60,60 0 0 1 -60,-60 v-220 a60,60 0 0 1 60,-60 z"/>
+    <path android:fillColor="@android:color/white" android:pathData="M560,520 h220 a60,60 0 0 1 60,60 v220 a60,60 0 0 1 -60,60 h-220 a60,60 0 0 1 -60,-60 v-220 a60,60 0 0 1 60,-60 z"/>
+</vector>

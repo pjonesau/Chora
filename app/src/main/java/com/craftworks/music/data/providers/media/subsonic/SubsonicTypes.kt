@@ -56,6 +56,9 @@ data class SubsonicBody(
     val albumList2: SubsonicAlbumList? = null,
     val album: SubsonicAlbum? = null,
 
+    // Genres
+    val genres: SubsonicGenres? = null,
+
     // Artists
     val artists: SubsonicArtistIndexList? = null,
     val artist: SubsonicArtist? = null,
@@ -100,6 +103,29 @@ data class Starred(
 data class SubsonicSongList(
     val song: List<SubsonicSong>? = null
 )
+
+@Serializable
+data class SubsonicGenres(
+    val genre: List<SubsonicGenre>? = null
+)
+
+/**
+ * A genre from getGenres. The name arrives as "value"; "name" is not in the spec but some
+ * servers send it, so it is accepted as a fallback.
+ */
+@Serializable
+data class SubsonicGenre(
+    @SerialName("value") val value: String? = null,
+    @SerialName("name") val name: String? = null,
+    val songCount: Int? = 0,
+    val albumCount: Int? = 0
+) {
+    fun toMediaModel() = MediaModel.Genre(
+        albumCount = albumCount ?: 0,
+        name = (value ?: name).orEmpty().ifBlank { MediaModel.Genre.EMPTY_NAME },
+        songCount = songCount ?: 0
+    )
+}
 @Serializable
 data class SubsonicSong(
     val id: String,

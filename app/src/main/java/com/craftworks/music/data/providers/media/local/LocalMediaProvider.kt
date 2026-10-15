@@ -310,7 +310,11 @@ class LocalMediaProvider(var providerData: LocalProviderData) : MediaProvider() 
     }
 
     override suspend fun getGenreList(query: MediaQuery.GenreListQuery): List<MediaModel.Genre> {
-        TODO("Not yet implemented")
+        // Local libraries do not advertise ProviderFeature.GENRES, so the Genres tab is hidden
+        // for them. Returning empty rather than throwing keeps a provider switch onto a local
+        // library harmless if the screen is open at the time.
+        Log.d(TAG, "Genre browsing is not supported for local libraries")
+        return emptyList()
     }
 
     override suspend fun getImageRequest(

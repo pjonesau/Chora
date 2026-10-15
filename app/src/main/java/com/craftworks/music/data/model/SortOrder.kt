@@ -75,7 +75,9 @@ enum class SongListSort {
     YEAR
 }
 enum class GenreListSort {
+    ALBUM_COUNT,
     NAME,
+    SONG_COUNT,
 }
 enum class PlaylistListSort {
     DURATION,
