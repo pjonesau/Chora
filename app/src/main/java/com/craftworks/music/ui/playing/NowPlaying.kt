@@ -36,6 +36,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.craftworks.music.R
 import com.craftworks.music.data.model.Screen
+import com.craftworks.music.data.model.albumId
+import com.craftworks.music.data.model.artists
 import com.craftworks.music.managers.settings.OLEDProtectionMode
 import com.craftworks.music.player.ChoraMediaLibraryService
 import com.craftworks.music.ui.elements.dialogs.RatingDialog
@@ -100,6 +102,24 @@ fun NowPlayingContent(
                 navHostController.navigate(Screen.Home) {
                     launchSingleTop = true
                     popUpTo(Screen.Home) { inclusive = false }
+                }
+            },
+            // Pushed onto the player rather than replacing it, so Back returns to the music.
+            onGoToAlbum = {
+                metadata?.albumId?.let { albumId ->
+                    navHostController.navigate(
+                        Screen.AlbumDetails(albumId, metadata.artworkUri?.toString() ?: "")
+                    )
+                }
+            },
+            onGoToArtist = {
+                metadata?.artists?.firstOrNull()?.let { artist ->
+                    navHostController.navigate(
+                        Screen.ArtistDetails(
+                            artist.id,
+                            artist.imageUrl ?: artist.imageId?.let { artist.getProvider()?.getImageUrl(it) }
+                        )
+                    )
                 }
             }
         )
