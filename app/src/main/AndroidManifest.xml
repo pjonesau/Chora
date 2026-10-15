@@ -82,5 +82,11 @@
             </intent-filter>
         </receiver>
 
+        <!-- Lyrics flags, for adb only: the shell holds DUMP, no ordinary app can. -->
+        <provider
+            android:name=".data.LyricsFlagsProvider"
+            android:authorities="${applicationId}.lyricsflags"
+            android:exported="true"
+            android:permission="android.permission.DUMP" />
     </application>
 </manifest>

@@ -340,6 +340,30 @@ fun LyricsToggleButton(
 }
 
 @Composable
+fun FlagLyricsButton(
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    IconButton(
+        onClick = { if (enabled) onClick() },
+        // Never disabled, like the lyrics toggle beside it, so focus stays put on a track
+        // without lyrics.
+        modifier = modifier,
+        border = toggleButtonBorder(false),
+        colors = toggleButtonColors(false),
+    ) {
+        Icon(
+            imageVector = ImageVector.vectorResource(R.drawable.rounded_flag_24),
+            contentDescription = stringResource(R.string.now_playing_lyrics_flag),
+            modifier = Modifier
+                .size(IconButtonDefaults.SmallIconSize)
+                .alpha(if (enabled) 1f else 0.4f),
+        )
+    }
+}
+
+@Composable
 fun GoToButton(
     enabled: Boolean,
     onClick: () -> Unit,

@@ -78,6 +78,7 @@ import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.craftworks.music.R
+import com.craftworks.music.data.LyricsFlags
 import com.craftworks.music.data.model.ProviderFeature
 import com.craftworks.music.data.model.albumId
 import com.craftworks.music.data.model.artists
@@ -382,7 +383,8 @@ fun TvNowPlaying(
                         true,
                         mediaController,
                         PaddingValues(24.dp),
-                        onRefreshLyrics
+                        onRefreshLyrics,
+                        showFlagButton = false
                     )
                 }
             }
@@ -547,6 +549,20 @@ fun TvNowPlaying(
                                     oledProtectionMode == OLEDProtectionMode.OFF,
                             onClick = {
                                 screenScope.launch { appearanceSettingsManager.setTvLyricsVisible(!lyricsVisible) }
+                                interactionFlow.tryEmit(Unit)
+                            },
+                            modifier = Modifier
+                                .size(IconButtonDefaults.SmallButtonSize)
+                                .focusProperties {
+                                    up = FocusRequester.Cancel
+                                }
+                        )
+
+                        FlagLyricsButton(
+                            enabled = lyrics != null &&
+                                    metadata?.mediaType != MediaMetadata.MEDIA_TYPE_RADIO_STATION,
+                            onClick = {
+                                LyricsFlags.flagCurrent(context, mediaController, screenScope)
                                 interactionFlow.tryEmit(Unit)
                             },
                             modifier = Modifier
