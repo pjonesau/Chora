@@ -150,6 +150,17 @@ If you are looking for something well-tested, upstream's releases are the safe c
   and since failures are not cached, the track stayed without lyrics until it was played
   again. Lookups now back off and retry up to three times — 1, 2 then 4 seconds, or
   longer when the server asks.
+- **LRCLIB finds timed lyrics far more often.** Its search treats the
+  artist as a phrase every result must contain, and Chora searched under the album
+  artist — so every compilation track was looked up as "Various Artists", and a credit
+  written differently from the database's ("Artist feat. Guest", a duo joined with "&")
+  found nothing. The track's own artist is searched first now, then the album artist, the
+  credit without its guests, its first name and the sort name, and finally the title
+  alone, accepting only results credited to one of those. The exact lookup is also
+  repeated without the album, which LRCLIB otherwise requires to match. Records timed to
+  a different master — sung lines running more than two seconds past the end of the
+  track — are no longer shown as synced. Replayed over 1,000 tracks from a Navidrome
+  library, timed lyrics went from 50% of tracks to 65%.
 - **Scrobbles carry the time they were played.** Chora sent the playback position as the
   scrobble's timestamp, so Navidrome dated every play a few minutes into 1 January 1970,
   and nothing played through Chora ever appeared in its recently-played list.
