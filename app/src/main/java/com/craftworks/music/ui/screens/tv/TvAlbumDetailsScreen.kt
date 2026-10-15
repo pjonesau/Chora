@@ -77,7 +77,6 @@ import com.craftworks.music.player.SongHelper
 import com.craftworks.music.ui.elements.dialogs.tv.SongDialog
 import com.craftworks.music.ui.elements.tv.TvHorizontalSongCard
 import com.craftworks.music.ui.elements.tv.rememberTvFocusRestoreState
-import com.craftworks.music.ui.playing.tv.TvPlayQueue
 import com.craftworks.music.ui.viewmodels.AlbumDetailsViewModel
 import com.craftworks.music.utils.StringUtils
 import kotlinx.coroutines.delay
@@ -136,8 +135,6 @@ fun TvAlbumDetails(
         val coroutineScope = rememberCoroutineScope()
         val playRequester = remember { FocusRequester() }
         val trackListRequester = remember { FocusRequester() }
-        val queueButtonRequester = remember { FocusRequester() }
-        var showQueue by remember { mutableStateOf(false) }
 
         var isStarred by remember {
             mutableStateOf(
@@ -278,22 +275,6 @@ fun TvAlbumDetails(
                         Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                         Text(stringResource(R.string.action_shuffle))
                     }
-
-                    OutlinedButton(
-                        onClick = { showQueue = true },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .focusRequester(queueButtonRequester),
-                        contentPadding = ButtonDefaults.ButtonWithIconContentPadding
-                    ) {
-                        Icon(
-                            ImageVector.vectorResource(R.drawable.rounded_queue_music_24),
-                            contentDescription = null,
-                            modifier = Modifier.size(ButtonDefaults.IconSize),
-                        )
-                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                        Text(stringResource(R.string.now_playing_queue))
-                    }
                 }
             }
 
@@ -378,16 +359,6 @@ fun TvAlbumDetails(
                     }
                 }
             }
-        }
-
-        if (showQueue) {
-            TvPlayQueue(
-                mediaController = mediaController,
-                onClose = {
-                    showQueue = false
-                    coroutineScope.launch { queueButtonRequester.requestFocus() }
-                }
-            )
         }
     }
 
