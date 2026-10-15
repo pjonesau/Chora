@@ -11,6 +11,7 @@ import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -45,7 +46,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -56,7 +56,7 @@ import androidx.media3.session.MediaController
 import com.craftworks.music.R
 import com.craftworks.music.data.model.LyricSource
 import com.craftworks.music.data.model.LyricsAgentType
-import com.craftworks.music.data.providers.media.local.LocalMediaProvider
+import com.craftworks.music.data.model.providerId
 import com.craftworks.music.data.repository.LyricsState
 import com.craftworks.music.managers.MediaProviderManager
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
@@ -349,14 +349,28 @@ fun LyricsView(
                         .fillMaxHeight()
                 }
             ) {
-                LazyColumn(
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
-                        .onSizeChanged { size ->
-                            scrollOffset = (size.height * 0.2f).toInt()
-                            plainLyricsViewportHeightPx = size.height.toFloat()
-                        }
+                ) {
+                    LyricsSourceLabel(
+                        source = lyrics.source,
+                        mediaController = mediaController,
+                        color = color,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    // The list's item indices are lyric line indices, so nothing may be inserted
+                    // into it - the source label lives here instead.
+                    LazyColumn(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .onSizeChanged { size ->
+                                scrollOffset = (size.height * 0.2f).toInt()
+                                plainLyricsViewportHeightPx = size.height.toFloat()
+                            }
                         .verticalFadingEdges(
                             FadingEdgesContentType.Dynamic.Lazy.List(
                                 FadingEdgesScrollConfig.Dynamic(),
@@ -365,117 +379,75 @@ fun LyricsView(
                             FadingEdgesGravity.All,
                             96.dp
                         ),
-                    verticalArrangement = Arrangement.Top,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    contentPadding = PaddingValues(vertical = 32.dp),
-                    state = state,
-                ) {
-                    if (lyrics.lines.size > 1) {
-                        itemsIndexed(
-                            lyrics.lines,
-                            key = { index, lyric -> "${index}:${lyric.lines[0].text}" }
-                        ) { index, lyric ->
-                            val alignment = agentAlignment[lyric.agentId] ?: lyricsAlignment
+                        verticalArrangement = Arrangement.Top,
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        contentPadding = PaddingValues(vertical = 32.dp),
+                        state = state,
+                    ) {
+                        if (lyrics.lines.size > 1) {
+                            itemsIndexed(
+                                lyrics.lines,
+                                key = { index, lyric -> "${index}:${lyric.lines[0].text}" }
+                            ) { index, lyric ->
+                                val alignment = agentAlignment[lyric.agentId] ?: lyricsAlignment
 
-                            if (!lyric.lines.any { it.words.isNullOrEmpty() }) {
-                                WordSyncedLyricItem(
-                                    lyric = lyric,
-                                    index = index,
-                                    currentLyricIndex = currentLyricIndex.intValue,
-                                    currentPosition = currentPositionLyrics,
-                                    useBlur = useBlur,
-                                    useWordBounce = lyricsWordBounce,
-                                    visibleItemsInfo = visibleItemsInfo,
-                                    color = color,
-                                    lyricsAnimationSpeed = lyricsAnimationSpeed,
-                                    lyricsAlignment = alignment,
-                                    onClick = {
-                                        mediaController?.seekTo(lyric.startMs.toLong())
-                                        currentPositionLyrics = lyric.startMs
-                                        currentPositionScroll = lyric.startMs
-                                        userScrolled = false
-                                    }
-                                )
-                            } else {
-                                SyncedLyricItem(
-                                    lyric = lyric,
-                                    index = index,
-                                    currentLyricIndex = currentLyricIndex.intValue,
-                                    useBlur = useBlur,
-                                    visibleItemsInfo = visibleItemsInfo,
-                                    color = color,
-                                    lyricsAnimationSpeed = lyricsAnimationSpeed,
-                                    lyricsAlignment = alignment,
-                                    onClick = {
-                                        mediaController?.seekTo(lyric.startMs.toLong())
-                                        currentPositionLyrics = lyric.startMs
-                                        currentPositionScroll = lyric.startMs
-                                        userScrolled = false
-                                    }
-                                )
-                            }
-                        }
-                        item {
-                            val blur: Dp by animateDpAsState(
-                                targetValue = if (useBlur) calculateLyricBlur(
-                                    lyrics.lines.size, currentLyricIndex.intValue + 1, visibleItemsInfo
-                                ) else 0.dp,
-                                label = "Lyric Blur",
-                                animationSpec = tween(lyricsAnimationSpeed / 2, 0, FastOutSlowInEasing)
-                            )
-                            val provider by MediaProviderManager.currentProvider.collectAsStateWithLifecycle()
-                            val url = when (lyrics.source) {
-                                LyricSource.MEDIA_PROVIDER -> {
-                                    stringResource(provider?.providerName ?: androidx.media3.session.R.string.error_message_bad_value)
+                                if (!lyric.lines.any { it.words.isNullOrEmpty() }) {
+                                    WordSyncedLyricItem(
+                                        lyric = lyric,
+                                        index = index,
+                                        currentLyricIndex = currentLyricIndex.intValue,
+                                        currentPosition = currentPositionLyrics,
+                                        useBlur = useBlur,
+                                        useWordBounce = lyricsWordBounce,
+                                        visibleItemsInfo = visibleItemsInfo,
+                                        color = color,
+                                        lyricsAnimationSpeed = lyricsAnimationSpeed,
+                                        lyricsAlignment = alignment,
+                                        onClick = {
+                                            mediaController?.seekTo(lyric.startMs.toLong())
+                                            currentPositionLyrics = lyric.startMs
+                                            currentPositionScroll = lyric.startMs
+                                            userScrolled = false
+                                        }
+                                    )
+                                } else {
+                                    SyncedLyricItem(
+                                        lyric = lyric,
+                                        index = index,
+                                        currentLyricIndex = currentLyricIndex.intValue,
+                                        useBlur = useBlur,
+                                        visibleItemsInfo = visibleItemsInfo,
+                                        color = color,
+                                        lyricsAnimationSpeed = lyricsAnimationSpeed,
+                                        lyricsAlignment = alignment,
+                                        onClick = {
+                                            mediaController?.seekTo(lyric.startMs.toLong())
+                                            currentPositionLyrics = lyric.startMs
+                                            currentPositionScroll = lyric.startMs
+                                            userScrolled = false
+                                        }
+                                    )
                                 }
-                                LyricSource.LRCLIB -> MediaProviderSettingsManager(LocalContext.current).lrcLibEndpointFlow.collectAsStateWithLifecycle("https://lrclib.net").value
-                                LyricSource.LRCRED -> "https://lrc.red"
-                                LyricSource.UNISON -> "https://unison.boidu.dev"
-                                LyricSource.NETEASE -> "https://music.163.com"
                             }
-
-                            val uriHandler = LocalUriHandler.current
-
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 12.dp)
-                                    .height(48.dp)
-                                    .clickable(
-                                        enabled = !(lyrics.source == LyricSource.MEDIA_PROVIDER && provider is LocalMediaProvider),
-                                        onClick = { uriHandler.openUri(url) }
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
+                        } else if (lyrics.lines.isNotEmpty()) {
+                            item {
                                 Text(
-                                    text = stringResource(
-                                        R.string.now_playing_lyrics_credit,
-                                        lyrics.source.displayName
-                                    ),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = color.copy(0.5f),
-                                    textAlign = TextAlign.Center
+                                    text = lyrics.lines[0].lines[0].text,
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    lineHeight = MaterialTheme.typography.displayMedium.lineHeight,
+                                    color = color,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .onSizeChanged { size ->
+                                            plainLyricsItemHeightPx = size.height.toFloat()
+                                        },
+                                    textAlign = when (lyricsAlignment) {
+                                        NowPlayingAlignment.LEFT -> TextAlign.Start
+                                        NowPlayingAlignment.CENTER -> TextAlign.Center
+                                        NowPlayingAlignment.RIGHT -> TextAlign.End
+                                    }
                                 )
                             }
-                        }
-                    } else if (lyrics.lines.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = lyrics.lines[0].lines[0].text,
-                                style = MaterialTheme.typography.headlineMedium,
-                                lineHeight = MaterialTheme.typography.displayMedium.lineHeight,
-                                color = color,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .onSizeChanged { size ->
-                                        plainLyricsItemHeightPx = size.height.toFloat()
-                                    },
-                                textAlign = when (lyricsAlignment) {
-                                    NowPlayingAlignment.LEFT -> TextAlign.Start
-                                    NowPlayingAlignment.CENTER -> TextAlign.Center
-                                    NowPlayingAlignment.RIGHT -> TextAlign.End
-                                }
-                            )
                         }
                     }
                 }
@@ -502,4 +474,32 @@ private fun getNextUpdateDelay(currentTime: Int, lyrics: List<Int>): Long {
         ?: return 1000L
 
     return (nextTimestamp - currentTime).toLong().coerceIn(1L, 1000L)
+}
+/**
+ * Credits the source the displayed lyrics came from, so one that keeps answering with the wrong
+ * recording can be found and moved down - or switched off - in the lyrics settings.
+ */
+@Composable
+private fun LyricsSourceLabel(
+    source: LyricSource,
+    mediaController: MediaController?,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    val providerId = mediaController?.currentMediaItem?.mediaMetadata?.providerId
+    val provider = remember(providerId) { providerId?.let { MediaProviderManager.getProvider(it) } }
+
+    val name = when (source) {
+        // "Media Providers" is the settings row's name; the server's own says more here.
+        LyricSource.MEDIA_PROVIDER -> provider?.let { stringResource(it.providerName) }
+            ?: stringResource(R.string.settings_media_providers)
+        else -> source.displayName
+    }
+
+    Text(
+        text = stringResource(R.string.now_playing_lyrics_source, name),
+        style = MaterialTheme.typography.labelMedium,
+        color = color.copy(alpha = 0.6f),
+        modifier = modifier
+    )
 }

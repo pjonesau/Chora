@@ -1,6 +1,5 @@
 package com.craftworks.music.ui.elements.tv
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -8,21 +7,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.FocusRequester.Companion.FocusRequesterFactory.component1
+import androidx.compose.ui.focus.FocusRequester.Companion.FocusRequesterFactory.component2
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Checkbox
@@ -37,7 +37,6 @@ import androidx.tv.material3.ListItemScale
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.craftworks.music.R
-import com.craftworks.music.data.model.LyricSource
 import com.craftworks.music.data.model.LyricsProvider
 import com.craftworks.music.data.providers.media.MediaProvider
 import com.craftworks.music.data.providers.media.local.LocalMediaProvider
@@ -45,6 +44,56 @@ import com.craftworks.music.data.providers.media.subsonic.SubsonicMediaProvider
 import com.craftworks.music.managers.DataRefreshManager
 import com.craftworks.music.managers.MediaProviderManager
 import com.craftworks.music.managers.settings.MediaProviderSettingsManager
+
+@Composable
+private fun ProviderItem(
+    icon: Int,
+    title: String,
+    subtitle: String,
+    trailingContent: @Composable () -> Unit = { },
+    enabled: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = { }
+) {
+    ListItem(
+        selected = enabled,
+        scale = ListItemScale.None,
+        leadingContent = {
+            Icon(
+                painter = painterResource(icon),
+                contentDescription = null,
+                modifier = Modifier.size(ListItemDefaults.IconSize)
+            )
+        },
+        headlineContent = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier
+            )
+        },
+        supportingContent = if (subtitle.isNotEmpty()) {
+            {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        } else null,
+        trailingContent = {
+            Row {
+                trailingContent()
+
+                Checkbox(
+                    checked = enabled,
+                    onCheckedChange = { }
+                )
+            }
+        },
+        onClick = onClick,
+        onLongClick = onLongClick
+    )
+}
 
 @OptIn(ExperimentalTvMaterial3Api::class, ExperimentalTvMaterial3Api::class)
 @Composable
@@ -164,102 +213,49 @@ fun TvProviderCard(provider: MediaProvider) {
 @Composable
 fun TvLyricsProviderCard(
     provider: LyricsProvider,
-    onCheckedChange: (Boolean) -> Unit,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit,
-    onEditClick: (() -> Unit) = { }
+    subtitle: String = "",
+    isFirst: Boolean = false,
+    isLast: Boolean = false,
+    onMoveUp: () -> Unit = { },
+    onMoveDown: () -> Unit = { },
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = { }
 ) {
-    val (itemFocus, upFocus, downFocus) = remember { FocusRequester.createRefs() }
-
-    val context = LocalContext.current
-    val mediaProvider by MediaProviderManager.currentProvider.collectAsStateWithLifecycle()
-
-    val url = when (provider.source) {
-        LyricSource.MEDIA_PROVIDER -> {
-            when (mediaProvider) {
-                is LocalMediaProvider -> stringResource(R.string.source_local_folder)
-                is SubsonicMediaProvider -> (mediaProvider as SubsonicMediaProvider).providerData.url
-                else -> ""
-            }
-        }
-        LyricSource.LRCLIB -> MediaProviderSettingsManager(context).lrcLibEndpointFlow.collectAsStateWithLifecycle("https://lrclib.net").value
-        LyricSource.LRCRED -> "https://lrc.red"
-        LyricSource.UNISON -> "https://unison.boidu.dev"
-        LyricSource.NETEASE -> "https://music.163.com"
-    }
-
-    ListItem(
-        modifier = Modifier
-            .focusRequester(itemFocus)
-            .focusProperties {
-                right = upFocus
-            },
-        selected = provider.enabled,
-        scale = ListItemScale.None,
-        leadingContent = {
-            Image(
-                painter = painterResource(provider.source.icon),
-                contentDescription = null,
-                modifier = Modifier.size(ListItemDefaults.IconSize)
-            )
-        },
-        headlineContent = {
-            Text(
-                text = provider.source.displayName,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier
-            )
-        },
-        supportingContent = {
-            Text(
-                text = url,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier
-            )
-        },
+    ProviderItem(
+        icon = provider.source.icon,
+        title = provider.source.displayName,
+        subtitle = subtitle,
         trailingContent = {
-            Row (
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                IconButton(
-                    onClick = onMoveUp,
-                    modifier = Modifier.focusRequester(upFocus)
-                        .focusProperties{
-                            left = itemFocus
-                            right = downFocus
-                        },
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.KeyboardArrowUp,
-                        contentDescription = null
-                    )
-                }
-
-                IconButton(
-                    onClick = onMoveDown,
-                    modifier = Modifier.focusRequester(downFocus)
-                        .focusProperties {
-                            left = upFocus
-                            right = itemFocus
-                        },
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.KeyboardArrowDown,
-                        contentDescription = null
-                    )
-                }
-
-                Checkbox(
-                    checked = provider.enabled,
-                    onCheckedChange = { }
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                ReorderButton(R.drawable.arrow_upward_24px, "Move up", dimmed = isFirst, onClick = onMoveUp)
+                ReorderButton(R.drawable.arrow_downward_24px, "Move down", dimmed = isLast, onClick = onMoveDown)
             }
         },
-        onClick = { onCheckedChange(!provider.enabled) },
-        onLongClick = {
-            if (provider.source == LyricSource.LRCLIB)
-                onEditClick()
-        }
+        enabled = provider.enabled,
+        onClick = onClick,
+        onLongClick = onLongClick
     )
+}
+
+/**
+ * Dimmed rather than disabled at the ends of the list: a disabled tv-material IconButton cannot
+ * take focus, so the row would lose it the moment it arrived at the top.
+ */
+@Composable
+private fun ReorderButton(
+    icon: Int,
+    description: String,
+    dimmed: Boolean,
+    onClick: () -> Unit
+) {
+    IconButton(
+        onClick = { if (!dimmed) onClick() },
+        modifier = Modifier.alpha(if (dimmed) 0.4f else 1f)
+    ) {
+        Icon(
+            imageVector = ImageVector.vectorResource(icon),
+            contentDescription = description,
+            modifier = Modifier.size(ListItemDefaults.IconSize)
+        )
+    }
 }

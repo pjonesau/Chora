@@ -7,6 +7,11 @@ import com.craftworks.music.data.model.Lyrics
 import com.craftworks.music.data.model.LyricsLine
 import com.craftworks.music.data.model.NeteaseLyricsResponse
 import com.craftworks.music.data.model.toLyrics
+import com.craftworks.music.data.providers.lyrics.asKnownDurationMs
+import com.craftworks.music.data.providers.lyrics.asQueryValue
+import com.craftworks.music.data.providers.lyrics.durationDistanceMs
+import com.craftworks.music.data.providers.lyrics.durationWithinTolerance
+import com.craftworks.music.data.providers.lyrics.isSameAs
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -46,12 +51,20 @@ data class NeteaseSearchResult(
 data class NeteaseSong(
     val id: Long,
     val name: String,
-    val artists: List<NeteaseArtist> = emptyList()
+    val artists: List<NeteaseArtist> = emptyList(),
+    /** Milliseconds, unlike every other source here. */
+    val duration: Long? = null,
+    val album: NeteaseAlbum? = null
 )
 
 @Serializable
 data class NeteaseArtist(
     val name: String
+)
+
+@Serializable
+data class NeteaseAlbum(
+    val name: String? = null
 )
 
 @Singleton
@@ -79,12 +92,16 @@ class NeteaseDataSource @Inject constructor(
     private val userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
-    suspend fun getLyrics(metadata: MediaMetadata?): Lyrics? = withContext(Dispatchers.IO) {
+    suspend fun getLyrics(
+        metadata: MediaMetadata?,
+        durationToleranceSeconds: Int
+    ): Lyrics? = withContext(Dispatchers.IO) {
         try {
-            val title  = metadata?.title?.toString() ?: return@withContext null
-            val artist = metadata.extras?.getString("lyricsArtist") ?: ""
+            val title = metadata?.title?.toString().asQueryValue() ?: return@withContext null
+            val artist = (metadata?.extras?.getString("lyricsArtist") ?: metadata?.artist?.toString()).asQueryValue()
+            val durationMs = metadata?.durationMs.asKnownDurationMs()
 
-            val songId = searchSongId(title, artist) ?: return@withContext null
+            val songId = searchSongId(title, artist, durationMs, durationToleranceSeconds) ?: return@withContext null
             val lyricsResponse = fetchLyrics(songId)
 
             lyricsResponse.toLyrics()
@@ -94,17 +111,40 @@ class NeteaseDataSource @Inject constructor(
         }
     }
 
-    private suspend fun searchSongId(title: String, artist: String): Long? {
-        val query = if (artist.isNotBlank()) "$title $artist" else title
+    private suspend fun searchSongId(
+        title: String,
+        artist: String?,
+        durationMs: Long?,
+        durationToleranceSeconds: Int
+    ): Long? {
+        val query = if (!artist.isNullOrBlank()) "$title $artist" else title
         val response: NeteaseSearchResponse = client.get(
             "https://music.163.com/api/search/get"
         ) {
             parameter("s", query)
             parameter("type", 1) // 1 = songs
-            parameter("limit", 1)
+            parameter("limit", 10)
             header(HttpHeaders.UserAgent, userAgent)
         }.body()
-        return response.result?.songs?.firstOrNull()?.id
+
+        val songs = response.result?.songs.orEmpty()
+
+        // NetEase has no ISRC and reports lengths in milliseconds, so the length and the artist are
+        // the only things that tell the right recording apart from the covers it also returns.
+        val withinTolerance = songs.filter {
+            durationWithinTolerance(durationMs, it.duration?.toDouble()?.div(1000.0), durationToleranceSeconds)
+        }
+        Log.d("LYRICS", "NETEASE search \"$query\": ${songs.size} hits, ${withinTolerance.size} within ±${durationToleranceSeconds}s")
+
+        return withinTolerance
+            .sortedWith(
+                compareBy(
+                    { !it.name.isSameAs(title) },
+                    { artist != null && it.artists.none { songArtist -> songArtist.name.isSameAs(artist) } },
+                    { durationDistanceMs(durationMs, it.duration?.toDouble()?.div(1000.0)) }
+                )
+            )
+            .firstOrNull()?.id
     }
 
     private suspend fun fetchLyrics(songId: Long): NeteaseLyricsResponse {
@@ -116,7 +156,8 @@ class NeteaseDataSource @Inject constructor(
             parameter("tv", -1)
             header(HttpHeaders.UserAgent, userAgent)
         }
-        Log.d("LYRICS", "NETEASE: ${response.bodyAsText()}")
-        return response.body<NeteaseLyricsResponse>()
+        val lyrics = response.body<NeteaseLyricsResponse>()
+        Log.d("LYRICS", "NETEASE: $lyrics")
+        return lyrics
     }
 }

@@ -26,6 +26,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -49,6 +50,7 @@ import com.craftworks.music.ui.elements.dialogs.EditLrcLibUrlDialog
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalFoundationApi::class,
     ExperimentalMaterial3Api::class
@@ -148,6 +150,31 @@ fun S_LyricsProviderScreen(navHostController: NavHostController = rememberNavCon
                             }
                         )
                     }
+                }
+
+                // Below the provider rows on purpose: the reorder callback above treats LazyList
+                // indices as provider indices, so anything placed before them corrupts the order.
+                item(key = "lyrics_duration_tolerance") {
+                    val tolerance by settingsManager.lyricsDurationToleranceFlow.collectAsStateWithLifecycle(
+                        MediaProviderSettingsManager.DEFAULT_LYRICS_DURATION_TOLERANCE
+                    )
+                    var sliderValue by remember(tolerance) { mutableFloatStateOf(tolerance.toFloat()) }
+
+                    SettingsSlider(
+                        settingsName = stringResource(R.string.settings_lyrics_duration_tolerance),
+                        value = sliderValue,
+                        steps = MediaProviderSettingsManager.MAX_LYRICS_DURATION_TOLERANCE - 1,
+                        minValue = 0f,
+                        maxValue = MediaProviderSettingsManager.MAX_LYRICS_DURATION_TOLERANCE.toFloat(),
+                        onValueChange = { sliderValue = it },
+                        // Persist on release rather than per drag frame - a DataStore write per
+                        // frame is what the older sliders here do, and it is worth not copying.
+                        onValueChangeFinished = {
+                            coroutineScope.launch {
+                                settingsManager.setLyricsDurationTolerance(sliderValue.roundToInt())
+                            }
+                        }
+                    )
                 }
             }
         }

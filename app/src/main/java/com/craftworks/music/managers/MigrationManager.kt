@@ -4,12 +4,14 @@ import android.content.Context
 import androidx.core.content.edit
 import com.craftworks.music.migrations.GenresTabMigration
 import com.craftworks.music.migrations.ProvidersRefactorMigration
+import com.craftworks.music.migrations.UnisonLyricsOffMigration
 
 object MigrationManager {
     private const val MIGRATION_VERSION = "version"
     private val Migrations = listOf(
         ProvidersRefactorMigration::class,
         GenresTabMigration::class,
+        UnisonLyricsOffMigration::class,
     )
     fun init(context: Context) {
         val migrationStatus = context.getSharedPreferences("MigrationStatus", Context.MODE_PRIVATE)

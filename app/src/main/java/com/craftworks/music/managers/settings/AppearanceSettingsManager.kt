@@ -55,6 +55,8 @@ class AppearanceSettingsManager @Inject constructor(
         private val USE_REFRESH_ANIMATION = booleanPreferencesKey("use_refresh_animation")
         private val SHOW_TRACK_NUMBERS = booleanPreferencesKey("show_track_numbers")
 
+        private val TV_LYRICS_VISIBLE = booleanPreferencesKey("tv_lyrics_visible")
+
         private val OLED_PROTECTION_MODE = stringPreferencesKey("oled_protection")
         private val DISABLE_SCREEN_STANDBY = booleanPreferencesKey("disable_screen_standby")
         private val ALBUM_DETAILS_BUTTONS = stringPreferencesKey("album_details_buttons")
@@ -272,6 +274,20 @@ class AppearanceSettingsManager @Inject constructor(
         withContext(NonCancellable) {
             context.dataStore.edit { preferences ->
                 preferences[LYRICS_AUTOSCROLL] = autoScroll
+            }
+        }
+    }
+
+    /** Whether the TV player shows the lyrics pane; the OLED protection modes can still override it. */
+    val tvLyricsVisibleFlow: Flow<Boolean> =
+        context.dataStore.data.map { preferences ->
+            preferences[TV_LYRICS_VISIBLE] ?: true
+        }
+
+    suspend fun setTvLyricsVisible(visible: Boolean) {
+        withContext(NonCancellable) {
+            context.dataStore.edit { preferences ->
+                preferences[TV_LYRICS_VISIBLE] = visible
             }
         }
     }

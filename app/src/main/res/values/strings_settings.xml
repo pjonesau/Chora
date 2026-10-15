@@ -51,6 +51,9 @@
             <string name="add_media_provider_login">Login</string>
     <string name="settings_lyrics_providers">Lyrics Providers</string>
         <string name="media_providers_lrclib_url">LRCLIB Url</string>
+    <string name="settings_lyrics_duration_tolerance">Lyrics Duration Tolerance</string>
+    <string name="settings_lyrics_duration_tolerance_value">±%1$d s</string>
+    <string name="settings_lyrics_duration_tolerance_exact">Exact length only</string>
     <string name="settings_playback">Playback</string>
         // Transcoding
         <string name="playback_max_bitrate">Max Bitrate</string>

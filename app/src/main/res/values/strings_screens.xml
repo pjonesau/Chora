@@ -16,6 +16,7 @@
     // Now Playing
     <string name="radio_empty">No similar songs found</string>
     <string name="now_playing_queue">Queue</string>
+    <string name="now_playing_lyrics_source">Lyrics from %1$s</string>
 
     // Genres
     <string name="genre_song_album_count">%1$d songs · %2$d albums</string>
