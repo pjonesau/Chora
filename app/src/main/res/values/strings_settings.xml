@@ -64,6 +64,7 @@
         <string name="playback_audio_offloading">Offload Audio</string>
         // Scrobble
         <string name="playback_min_scrobble_percentage">Min. Scrobble Percentage</string>
+        <string name="playback_min_scrobble_percentage_value">%1$d%%</string>
     <string name="settings_misc">Miscellaneous</string>
         // Download
     <string name="misc_download_template">Download Template</string>
