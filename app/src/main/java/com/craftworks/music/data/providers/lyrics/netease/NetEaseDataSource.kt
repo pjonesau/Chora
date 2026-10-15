@@ -134,9 +134,27 @@ class NeteaseDataSource @Inject constructor(
         val withinTolerance = songs.filter {
             durationWithinTolerance(durationMs, it.duration?.toDouble()?.div(1000.0), durationToleranceSeconds)
         }
-        Log.d("LYRICS", "NETEASE search \"$query\": ${songs.size} hits, ${withinTolerance.size} within ±${durationToleranceSeconds}s")
 
-        return withinTolerance
+        // The search itself is loose - it matches album names and single tokens - so its results
+        // include songs that are plainly not the one playing: "Back to the Future" by The Outatime
+        // Orchestra, an instrumental, matched "Lost in the Sky", a Chinese pop song off an album
+        // called Back to the Future, whose length happened to fit. The lyrics shown were the pop
+        // song's. A candidate that agrees neither on the name nor on the artist is a different
+        // song; one that agrees on either is kept, because NetEase spells the same act
+        // differently often enough, and version suffixes ("(2018 Remastered Version)") stop the
+        // name from matching on its own.
+        val agreeing = withinTolerance.filter { song ->
+            song.name.isSameAs(title) ||
+                artist == null || song.artists.isEmpty() ||
+                song.artists.any { songArtist -> songArtist.name.isSameAs(artist) }
+        }
+        Log.d(
+            "LYRICS",
+            "NETEASE search \"$query\": ${songs.size} hits, ${withinTolerance.size} within " +
+                "±${durationToleranceSeconds}s, ${agreeing.size} on name or artist"
+        )
+
+        return agreeing
             .sortedWith(
                 compareBy(
                     { !it.name.isSameAs(title) },
