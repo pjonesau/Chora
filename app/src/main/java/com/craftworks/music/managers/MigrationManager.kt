@@ -3,15 +3,19 @@ package com.craftworks.music.managers
 import android.content.Context
 import androidx.core.content.edit
 import com.craftworks.music.migrations.GenresTabMigration
+import com.craftworks.music.migrations.Migration
 import com.craftworks.music.migrations.ProvidersRefactorMigration
 import com.craftworks.music.migrations.UnisonLyricsOffMigration
 
 object MigrationManager {
     private const val MIGRATION_VERSION = "version"
-    private val Migrations = listOf(
-        ProvidersRefactorMigration::class,
-        GenresTabMigration::class,
-        UnisonLyricsOffMigration::class,
+
+    // Factories rather than KClass references: the migration is constructed when it runs, but R8
+    // can see the constructor and no reflective instantiation (and no keep rule) is needed.
+    private val Migrations: List<() -> Migration> = listOf(
+        ::ProvidersRefactorMigration,
+        ::GenresTabMigration,
+        ::UnisonLyricsOffMigration,
     )
     fun init(context: Context) {
         val migrationStatus = context.getSharedPreferences("MigrationStatus", Context.MODE_PRIVATE)
@@ -29,7 +33,7 @@ object MigrationManager {
         // Migrate if needed
         if (version >= 0 && version < Migrations.size) {
             for (i in version..<Migrations.size) {
-                Migrations[i].java.getDeclaredConstructor().newInstance().up(context);
+                Migrations[i]().up(context)
             }
         }
 
