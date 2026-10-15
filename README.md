@@ -97,6 +97,10 @@ If you are looking for something well-tested, upstream's releases are the safe c
   decodes is one the old code would have accepted and registered as a working server. The
   status the server returned is what decides now, and the dialog reports that the
   credentials were refused instead of printing a stack trace.
+- **The TV can add a song to any playlist again.** The add-to-playlist list was a
+  fixed-height column that could not scroll, so with more than seven playlists the rest
+  were unreachable — and so was the *New Playlist* entry below them, which meant no
+  playlist could be created from the TV at all. The list scrolls now.
 - **Release builds no longer crash on startup.** R8 stripped the no-arg constructor of a
   migration class, which `MigrationManager` builds reflectively; the release APK died in
   `Application.onCreate` before any UI appeared.
