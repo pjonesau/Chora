@@ -96,5 +96,4 @@ fun TvPlaylistScreen(
             setShowDialog = { showDeletePlaylistDialog.value = it },
             viewModel
         )
-
 }

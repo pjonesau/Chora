@@ -72,8 +72,21 @@ class PlaylistScreenViewModel @Inject constructor(
         }
     }
 
+    /**
+     * The playlist the details were last loaded for. Entering the playlist page runs
+     * [loadPlaylistDetails] again with the same id - which is what happens every time the TV page
+     * comes back from Now Playing - and emptying the song list there drops the page into its
+     * spinner, taking the track that had focus, and the list's scroll position, with it.
+     * Reloading the playlist already on screen keeps the songs, so the page stays as it was.
+     */
+    private var loadedPlaylistId: String? = null
+
     fun loadPlaylistDetails(playlistId: String) {
-        _selectedPlaylistSongs.value = emptyList<MediaItem>()
+        if (playlistId != loadedPlaylistId) {
+            _selectedPlaylistSongs.value = emptyList<MediaItem>()
+        }
+        loadedPlaylistId = playlistId
+
         _selectedPlaylist.value = _allPlaylists.value.first { it.mediaMetadata.id == playlistId}
         fetchPlaylistDetails() // Fetch details when playlist is set
     }

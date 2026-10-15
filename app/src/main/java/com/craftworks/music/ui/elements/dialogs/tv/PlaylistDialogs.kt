@@ -25,6 +25,8 @@ fun PlaylistDeletionConfirmationDialog(
         onDismissRequest = { setShowDialog(false) },
         containerColor = MaterialTheme.colorScheme.surface,
         title = {
+            // Focusable, but not clickable: the dialog opens on the far side of a held OK press, so the
+            // initial focus has to land somewhere that a carried-over key event cannot activate.
             Box(
                 modifier = Modifier.focusable()
             ) {
