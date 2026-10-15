@@ -87,6 +87,16 @@ If you are looking for something well-tested, upstream's releases are the safe c
   initialised when it replaced the Subsonic one, so playback and cover art failed until
   the app was restarted. This is likely the cause of
   [upstream issue #114](https://github.com/CraftWorksMC/Chora/issues/114).
+- **Deleting a playlist on TV asks first.** Long-pressing a playlist deleted it on the
+  spot, with no confirmation and no undo, which a remote makes easy to do by accident.
+  The dialog deliberately opens on its text rather than a button, so the held OK that
+  opened it cannot also confirm the deletion.
+- **A refused login is now refused.** The add-server flow built a success response out of
+  whatever the server returned and never checked its status. A wrong password was rejected
+  only because the error body happened to fail JSON decoding; an error response that
+  decodes is one the old code would have accepted and registered as a working server. The
+  status the server returned is what decides now, and the dialog reports that the
+  credentials were refused instead of printing a stack trace.
 - **Release builds no longer crash on startup.** R8 stripped the no-arg constructor of a
   migration class, which `MigrationManager` builds reflectively; the release APK died in
   `Application.onCreate` before any UI appeared.
@@ -100,14 +110,15 @@ If you are looking for something well-tested, upstream's releases are the safe c
 
 ## Ported from other forks
 
-The first round of fixes here was not written from scratch — it was found by reading the
-other forks of Chora and porting what they had already worked out. Thanks to all three:
+Several of the fixes here were not written from scratch — they were found by reading the
+other forks of Chora and porting what they had already worked out. Thanks to all four:
 
 | Fork | What was taken |
 |---|---|
 | [Andrezx16/Chora](https://github.com/Andrezx16/Chora) | The leaked lyrics position-tracking loops and player listeners (`561cc5b`), and skipping tracks with channel up/down on the TV remote (`e980624`) |
 | [Lauqnan14/Chora](https://github.com/Lauqnan14/Chora) | The same lyrics leak from a different angle (`cb8dfd6`), and shuffle handling (`fbdbbaf`) |
 | [davisv7/Chora](https://github.com/davisv7/Chora) | Shuffle handling (`7b69d73`), and signing release builds from an external keystore (`c470144`) |
+| [NathanMartinez/Chora](https://github.com/NathanMartinez/Chora) | Confirming playlist deletion on TV ([upstream PR #121](https://github.com/CraftWorksMC/Chora/pull/121)), and rejecting a refused Subsonic login (`b356f2a`) |
 
 As ported, the shuffle fix goes further than either original: `SongHelper.play` /
 `SongHelper.shuffle` now set shuffle mode explicitly at every call site, which also fixes
