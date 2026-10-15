@@ -67,6 +67,14 @@ fun TvSettingScreen(
         )
 
         SettingsButton(
+            Screen.S_Lyrics_Providers,
+            R.drawable.lyrics_active,
+            R.string.settings_lyrics_providers,
+            navHostController,
+            focusRestore.focusModifier("lyrics_providers")
+        )
+
+        SettingsButton(
             Screen.S_Playback,
             R.drawable.s_m_playback,
             R.string.settings_playback,
