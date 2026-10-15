@@ -30,7 +30,12 @@ class SongHelper {
             if (mediaItems.isEmpty())
                 return
 
-            play(mediaItems, mediaItems.indices.random(), mediaController, shuffle = true)
+            // Shuffle the list itself and play it in order, rather than turning on the player's
+            // shuffle mode. ExoPlayer's shuffle order is a random permutation that ignores the
+            // start index, so the first track could sit anywhere in it - Next went dim partway
+            // through, while the queue (shown in list order) still had songs after the current one.
+            // A pre-shuffled list keeps the queue, Next/Previous and Play Next in agreement.
+            play(mediaItems.shuffled(), 0, mediaController, shuffle = false)
         }
         fun enqueue(mediaItems: List<MediaItem>, mediaController: MediaController?) {
             mediaController?.addMediaItems(mediaItems)
