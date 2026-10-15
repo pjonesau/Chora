@@ -290,6 +290,12 @@ class LocalMediaProvider(var providerData: LocalProviderData) : MediaProvider() 
         TODO("Not yet implemented")
     }
 
+    /**
+     * Local libraries are not wired up to MediaStore's track credits, so an artist page shows
+     * only the albums filed under their name.
+     */
+    override suspend fun getArtistCreditAlbums(artistId: String): List<MediaModel.Album> = emptyList()
+
     override suspend fun getArtistList(query: MediaQuery.ArtistListQuery): List<MediaModel.Artist> {
         TODO("Not yet implemented")
     }

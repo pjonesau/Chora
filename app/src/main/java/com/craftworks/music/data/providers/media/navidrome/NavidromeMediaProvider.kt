@@ -41,6 +41,12 @@ import javax.net.ssl.X509TrustManager
 class NavidromeMediaProvider : SubsonicMediaProvider() {
 
     companion object {
+        /**
+         * Upper bound on the albums fetched for one artist's credits. Session players can be
+         * credited on hundreds of albums, and the artist screen only needs a sensible list.
+         */
+        private const val CREDIT_ALBUM_LIMIT = 200
+
         private val ALBUM_ARTIST_SORT_BINDING =
             mapOf(
                 AlbumArtistListSort.ALBUM_COUNT to "albumCount",
@@ -282,6 +288,19 @@ class NavidromeMediaProvider : SubsonicMediaProvider() {
             name = query.searchTerm,
             starred = query.favorite,
             year = query.maxYear ?: query.minYear
+        ).map { it.toMediaModel(id) }
+    }
+
+    /**
+     * An album's credited artists are the artists on its tracks, so the native API's artist_id
+     * filter returns both the artist's own albums and the compilations they only guest on.
+     * One query, and the caller sorts out which is which.
+     */
+    override suspend fun getArtistCreditAlbums(artistId: String): List<MediaModel.Album> {
+        return service.getAlbumList(
+            artistId = listOf(artistId),
+            end = CREDIT_ALBUM_LIMIT,
+            libraryId = data.libraries.filter { it.second }.map { it.first.id }
         ).map { it.toMediaModel(id) }
     }
 

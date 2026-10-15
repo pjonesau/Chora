@@ -46,7 +46,9 @@ fun AlbumCard(
     album: MediaItem,
     onClick: () -> Unit = { },
     onPlay: (album: MediaItem) -> Unit = { },
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Line under the title. Defaults to the album artist. */
+    subtitle: String? = null
 ) {
     if (album.mediaMetadata.mediaType != MediaMetadata.MEDIA_TYPE_ALBUM) return
     val context = LocalContext.current
@@ -121,7 +123,7 @@ fun AlbumCard(
         )
 
         Text(
-            text = album.mediaMetadata.albumArtist.toString(),
+            text = subtitle ?: album.mediaMetadata.albumArtist.toString(),
             style = MaterialTheme.typography.bodySmall,
             color = LocalContentColor.current.copy(alpha = 0.75f),
             maxLines = 1,
