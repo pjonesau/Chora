@@ -105,6 +105,10 @@ class ChoraMediaLibraryService : MediaLibraryService() {
     private var _sleepTimerRemainingTime = MutableStateFlow(0)
     val sleepTimerRemainingTime: StateFlow<Int> = _sleepTimerRemainingTime.asStateFlow()
 
+    // Failures in a row, so a queue of unplayable tracks cannot skip forever. Cleared as soon as
+    // a track is actually playing.
+    private var consecutivePlaybackErrors = 0
+
     @Inject lateinit var appearanceSettingsManager: AppearanceSettingsManager
     @Inject lateinit var playbackSettingsManager: PlaybackSettingsManager
     @Inject lateinit var transcodeManager: TranscodeManager
@@ -118,6 +122,9 @@ class ChoraMediaLibraryService : MediaLibraryService() {
 
     companion object {
         private var instance: ChoraMediaLibraryService? = null
+
+        /** Unplayable tracks skipped before playback stops and the error is shown. */
+        private const val MaxConsecutivePlaybackErrors = 3
 
         fun getInstance(): ChoraMediaLibraryService? {
             return instance
@@ -377,11 +384,37 @@ class ChoraMediaLibraryService : MediaLibraryService() {
                 error.printStackTrace()
                 Log.e("PLAYER", error.stackTraceToString())
 
+                // One track the server cannot serve - a file missing from the library, a
+                // container the decoder rejects - should not end the queue that contains it.
+                // Skip it and carry on, but give up after a few failures in a row: that many
+                // means the fault is not the track (no audio device, server unreachable) and
+                // skipping on would just race through the queue.
+                if (consecutivePlaybackErrors < MaxConsecutivePlaybackErrors &&
+                    player.hasNextMediaItem() && player.playWhenReady
+                ) {
+                    consecutivePlaybackErrors++
+                    Log.e(
+                        "PLAYER",
+                        "Skipping unplayable item ${player.currentMediaItemIndex} " +
+                            "($consecutivePlaybackErrors in a row)"
+                    )
+
+                    player.seekToNextMediaItem()
+                    player.prepare()
+                    player.play()
+                    return
+                }
+
                 Toast.makeText(
                     this@ChoraMediaLibraryService,
                     PlaybackException.getErrorCodeName(error.errorCode),
                     Toast.LENGTH_SHORT
                 ).show()
+            }
+
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                // A track that renders means whatever was wrong is behind us.
+                if (isPlaying) consecutivePlaybackErrors = 0
             }
 
             override fun onPositionDiscontinuity(
