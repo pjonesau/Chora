@@ -613,10 +613,9 @@ fun TvSideNavigation(
             }
         },
         content = {
-            Box(Modifier
-                .focusRestorer()
-                .focusGroup()
-            ) {
+            // Screens restore focus themselves (rememberTvFocusRestoreState), so no focusRestorer
+            // here: it would grab focus back to the first item of whatever was focused before.
+            Box(Modifier.focusGroup()) {
                 content()
             }
         }

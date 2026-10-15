@@ -26,8 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -50,6 +48,7 @@ import com.craftworks.music.data.model.SortOrder
 import com.craftworks.music.managers.MediaProviderManager
 import com.craftworks.music.ui.elements.dialogs.tv.GenericListDialog
 import com.craftworks.music.ui.elements.tv.TvArtistCard
+import com.craftworks.music.ui.elements.tv.rememberTvFocusRestoreState
 import com.craftworks.music.ui.viewmodels.ArtistsScreenViewModel
 import kotlinx.coroutines.flow.filter
 
@@ -80,9 +79,10 @@ fun TvArtistScreen(
     val sort by viewModel.sort.collectAsStateWithLifecycle()
 
     val focusRequester = remember { FocusRequester() }
+    val focusRestore = rememberTvFocusRestoreState()
 
     LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+        focusRestore.restore(focusRequester)
     }
 
     val gridState = rememberLazyGridState()
@@ -108,8 +108,7 @@ fun TvArtistScreen(
         modifier = Modifier
             .fillMaxSize()
             .focusGroup()
-            .focusRequester(focusRequester)
-            .focusRestorer(focusRequester),
+            .focusRequester(focusRequester),
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -169,11 +168,8 @@ fun TvArtistScreen(
         items(allArtistList) { artist ->
             TvArtistCard(
                 artist = artist,
-                modifier = Modifier.onFocusChanged {
-                    focusRequester.saveFocusedChild()
-                },
+                modifier = focusRestore.focusModifier(artist.id),
                 onClick = {
-                    focusRequester.saveFocusedChild()
                     navHostController.navigate(Screen.ArtistDetails(artist.id, artist.imageUrl ?: artist.imageId?.let {artist.getProvider()?.getImageUrl(it)} ?: "")) {
                         launchSingleTop = true
                     }

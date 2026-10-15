@@ -17,7 +17,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -32,6 +31,7 @@ import com.craftworks.music.ui.elements.dialogs.playlistToDelete
 import com.craftworks.music.ui.elements.dialogs.showDeletePlaylistDialog
 import com.craftworks.music.ui.elements.dialogs.tv.PlaylistDeletionConfirmationDialog
 import com.craftworks.music.ui.elements.tv.TvPlaylistCard
+import com.craftworks.music.ui.elements.tv.rememberTvFocusRestoreState
 import com.craftworks.music.ui.viewmodels.PlaylistScreenViewModel
 
 @Preview(showBackground = true, showSystemUi = true)
@@ -51,9 +51,10 @@ fun TvPlaylistScreen(
     var selectedTabIndex by remember { mutableIntStateOf(0) }
 
     val focusRequester = remember { FocusRequester() }
+    val focusRestore = rememberTvFocusRestoreState()
 
-    LaunchedEffect(Unit, playlists) {
-        focusRequester.requestFocus()
+    LaunchedEffect(Unit) {
+        focusRestore.restore(focusRequester)
     }
 
     LazyVerticalGrid(
@@ -61,8 +62,7 @@ fun TvPlaylistScreen(
         modifier = Modifier
             .fillMaxSize()
             .focusGroup()
-            .focusRequester(focusRequester)
-            .focusRestorer(focusRequester),
+            .focusRequester(focusRequester),
         contentPadding = PaddingValues(horizontal = 48.dp, vertical = 24.dp),
         horizontalArrangement = Arrangement.spacedBy(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -70,6 +70,7 @@ fun TvPlaylistScreen(
         items(playlists) { playlist ->
             TvPlaylistCard(
                 playlist = playlist,
+                modifier = focusRestore.focusModifier(playlist.mediaMetadata.id ?: playlist.mediaId),
                 onClick = {
                     navHostController.navigate(
                         Screen.PlaylistDetails(

@@ -40,7 +40,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -84,6 +83,7 @@ import com.craftworks.music.data.model.id
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
 import com.craftworks.music.player.SongHelper
 import com.craftworks.music.ui.elements.tv.TvAlbumCard
+import com.craftworks.music.ui.elements.tv.rememberTvFocusRestoreState
 import com.craftworks.music.ui.screens.HomeItem
 import com.craftworks.music.ui.viewmodels.HomeScreenViewModel
 import com.craftworks.music.utils.StringUtils
@@ -123,9 +123,10 @@ fun TvHomeScreen(
 
 
     val focusRequester = remember { FocusRequester() }
+    val focusRestore = rememberTvFocusRestoreState()
 
     LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+        focusRestore.restore(focusRequester)
     }
 
     val columnState = rememberLazyListState()
@@ -135,8 +136,7 @@ fun TvHomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .focusGroup()
-            .focusRequester(focusRequester)
-            .focusRestorer(focusRequester),
+            .focusRequester(focusRequester),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         /*
@@ -201,10 +201,12 @@ fun TvHomeScreen(
                 CarouselItem(
                     album = album,
                     carouselFocused = carouselFocused,
-                    modifier = Modifier.animateEnterExit(
-                        enter = slideInHorizontally(animationSpec = tween(1000)) { it / 16 },
-                        exit = slideOutHorizontally(animationSpec = tween(1000)) { -it / 16 }
-                    ),
+                    modifier = Modifier
+                        .animateEnterExit(
+                            enter = slideInHorizontally(animationSpec = tween(1000)) { it / 16 },
+                            exit = slideOutHorizontally(animationSpec = tween(1000)) { -it / 16 }
+                        )
+                        .then(focusRestore.focusModifier("carousel|" + album.mediaId)),
                     onPlay = {
                         coroutineScope.launch {
                             val mediaItems = viewModel.getAlbumSongs(
@@ -257,6 +259,7 @@ fun TvHomeScreen(
                     items(albums, key = {it.mediaId} ) { album ->
                         TvAlbumCard(
                             album = album,
+                            modifier = focusRestore.focusModifier(item.key + "|" + album.mediaId),
                             onClick = {
                                 navHostController.navigate(Screen.AlbumDetails(album.mediaMetadata.id?:"", album.mediaMetadata.artworkUri.toString())) {
                                     launchSingleTop = true
