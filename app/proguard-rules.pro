@@ -26,3 +26,10 @@
 -keepclassmembers class * extends androidx.datastore.preferences.protobuf.GeneratedMessageLite {
     <fields>;
 }
+
+# MigrationManager instantiates migrations reflectively with getDeclaredConstructor(), which R8
+# cannot see. Without this it strips the no-arg constructor and the first pending migration
+# crashes the app during Application.onCreate with NoSuchMethodException.
+-keepclassmembers class * implements com.craftworks.music.migrations.Migration {
+    <init>();
+}
