@@ -19,7 +19,7 @@ rather than this one. Everything here that is not listed under
 [Changes in this fork](#changes-in-this-fork) below is upstream's code, unmodified.
 
 The changes listed below were written with **Claude Code**, directed and tested by hand
-on the single TV described next. This fork is based on upstream `master` as of 1 October
+on the single TV described next. This fork is based on upstream `master` as of 8 October
 2026, and is kept current by merging upstream in by hand, so it may lag behind.
 
 Upstream is where bugs should be reported, translations contributed (via
@@ -176,50 +176,11 @@ LRC lines carrying several timestamps, and a 10-band equaliser —
 is a live bug upstream as well: a line with more than one timestamp uses the first and
 leaves the rest in the text.
 
-## Building
-
-JDK 21 and Android SDK platform 37 are required. The platform is `platforms;android-37.0`
-— `platforms;android-37` does not exist. There is no `local.properties` in the
-repository; either create one with `sdk.dir=…` or point `ANDROID_HOME` at the SDK.
-
-```bash
-ANDROID_HOME=/path/to/sdk ./gradlew assembleRelease   # app/build/outputs/apk/release/
-ANDROID_HOME=/path/to/sdk ./gradlew assembleDebug     # app/build/outputs/apk/debug/
-```
-
-A clean release build takes about two minutes and emits a number of harmless deprecation
-and native-library-stripping warnings.
-
-Release builds are signed from `keystore.properties` in the project root, or from the
-file named by `$CHORA_KEYSTORE_PROPERTIES`;
-[keystore.properties.example](keystore.properties.example) shows the format. With
-neither file present the debug key is used, so fresh clones and CI still build.
-
-CI (`.github/workflows/build.yml`) builds a debug APK on every push and uploads it as an
-artifact — the easiest way to get an installable APK without a local toolchain.
-
-### Sideloading to a TV
-
-```bash
-adb connect <tv-ip>:5555
-adb install -r app/build/outputs/apk/release/app-release.apk
-```
-
-The APK is universal (arm64-v8a, armeabi-v7a, x86, x86_64), so it covers 32-bit Fire TV
-devices as well. Fire OS 6 and newer report themselves as televisions and get the TV
-interface automatically; Vega OS Fire TV devices cannot run APKs at all.
-
-Two things to know before installing:
-
-- **The signing key must match the installed build.** Android refuses to update an app
-  signed with a different key (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`). This fork keeps
-  upstream's `com.craftworks.music` application id, so it will not install over a Play
-  Store or F-Droid build of Chora until that build is uninstalled.
-- **Uninstalling loses your servers.** Provider configuration, including credentials, is
-  encrypted with a key held in the device's Keystore and is not backed up, so a reinstall
-  means re-entering the server. Keep whatever key you sign releases with.
-
-Design, architecture and further build and deployment notes are in [CLAUDE.md](CLAUDE.md).
+One warning before installing: this fork keeps upstream's `com.craftworks.music`
+application id, and the provider configuration — server addresses and credentials — is
+encrypted with a key held in the device's Keystore and is not backed up. So uninstalling
+the app, or installing a build signed with a different key over it, loses the configured
+servers for good.
 
 ## License
 
