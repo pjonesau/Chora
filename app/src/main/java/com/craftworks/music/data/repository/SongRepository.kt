@@ -10,6 +10,7 @@ import com.craftworks.music.R
 import com.craftworks.music.data.model.LibraryType
 import com.craftworks.music.data.model.MediaQuery
 import com.craftworks.music.data.model.ScrobbleEvent
+import com.craftworks.music.data.model.artists
 import com.craftworks.music.data.model.getProvider
 import com.craftworks.music.data.model.id
 import com.craftworks.music.managers.MediaProviderManager
@@ -18,6 +19,12 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.coroutineScope
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * How many songs to ask a "similar music" seed for. Servers cap the response by what they
+ * actually know, so asking for a full queue is cheap; a niche seed can still come back shorter.
+ */
+private const val SimilarSongCount = 50
 
 @Singleton
 class SongRepository @Inject constructor(
@@ -40,6 +47,26 @@ class SongRepository @Inject constructor(
 
     suspend fun getSimilarSongs(songId: String, count: Int) : List<MediaItem> = coroutineScope {
         MediaProviderManager.currentProvider.value?.getSimilarSongs(songId, count)?.map { it.toMediaItem() } ?: listOf()
+    }
+
+    /**
+     * A radio queue seeded by [metadata]'s song. A cold or niche track can come back with
+     * nothing at all, so the song's first credited artist is used as the seed instead when the
+     * song-seeded endpoint is empty. Both empty means the caller has nothing to play.
+     */
+    suspend fun getSimilarMusic(
+        metadata: MediaMetadata,
+        count: Int = SimilarSongCount
+    ): List<MediaItem> = coroutineScope {
+        val provider = MediaProviderManager.currentProvider.value ?: return@coroutineScope listOf()
+        val songId = metadata.id ?: return@coroutineScope listOf()
+
+        val similar = provider.getSimilarSongs(songId, count)
+        if (similar.isNotEmpty()) return@coroutineScope similar.map { it.toMediaItem() }
+
+        val artistId = metadata.artists?.firstOrNull { it.id.isNotBlank() }?.id
+            ?: return@coroutineScope listOf()
+        provider.getArtistRadio(artistId, count).map { it.toMediaItem() }
     }
 
     suspend fun scrobbleSong(songId: String, position: Int, playbackRate: Float, event: ScrobbleEvent?, submission: Boolean) {

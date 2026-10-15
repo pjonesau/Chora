@@ -13,6 +13,7 @@
     <string name="action_play_all">Play all</string>
     <string name="action_shuffle_all">Shuffle all</string>
     <string name="action_shuffle">Shuffle</string>
+    <string name="action_radio">Radio</string>
 
     <string name="action_add">Add</string>
     <string name="action_add_to_queue">Add To Queue</string>

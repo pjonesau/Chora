@@ -300,12 +300,15 @@ class LocalMediaProvider(var providerData: LocalProviderData) : MediaProvider() 
         TODO("Not yet implemented")
     }
 
+    /**
+     * Local libraries carry no similarity data, so ProviderFeature.SIMILAR_SONGS is not
+     * advertised and the radio actions stay hidden. Empty rather than a throw keeps a screen
+     * that asks anyway harmless.
+     */
     override suspend fun getArtistRadio(
         artistId: String,
         count: Int?
-    ): List<MediaModel.Song> {
-        TODO("Not yet implemented")
-    }
+    ): List<MediaModel.Song> = emptyList()
 
     override suspend fun getDownloadUrl(id: String): String {
         TODO("Not yet implemented")
@@ -396,13 +399,12 @@ class LocalMediaProvider(var providerData: LocalProviderData) : MediaProvider() 
         TODO("Not yet implemented")
     }
 
+    /** See [getArtistRadio] - a local library has nothing to rank similarity by. */
     override suspend fun getSimilarSongs(
         songId: String,
         count: Int?,
         musicFolderId: List<String>?
-    ): List<MediaModel.Song> {
-        TODO("Not yet implemented")
-    }
+    ): List<MediaModel.Song> = emptyList()
 
     override suspend fun getSongDetail(id: String): MediaModel.Song {
         TODO("Not yet implemented")

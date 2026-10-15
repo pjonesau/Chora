@@ -53,4 +53,15 @@ class ArtistRepository @Inject constructor() {
     suspend fun getArtistInfo(artistId: String): AlbumArtistInfo? = coroutineScope {
         MediaProviderManager.currentProvider.value?.getAlbumArtistInfo(artistId)
     }
+
+    /**
+     * A queue of songs similar to the artist, for the artist radio action. Empty when the
+     * provider has no similarity data to rank by.
+     */
+    suspend fun getArtistRadio(artistId: String, count: Int = 50): List<MediaItem> = coroutineScope {
+        MediaProviderManager.currentProvider.value
+            ?.getArtistRadio(artistId, count)
+            ?.map { it.toMediaItem() }
+            ?: listOf()
+    }
 }

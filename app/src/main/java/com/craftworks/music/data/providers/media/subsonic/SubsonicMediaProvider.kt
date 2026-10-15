@@ -94,7 +94,8 @@ open class SubsonicMediaProvider : MediaProvider() {
         ProviderFeature.INTERNET_RADIO,
         ProviderFeature.PLAYLISTS,
         ProviderFeature.RATINGS,
-        ProviderFeature.GENRES
+        ProviderFeature.GENRES,
+        ProviderFeature.SIMILAR_SONGS
     )
 
     @Transient
@@ -477,7 +478,8 @@ open class SubsonicMediaProvider : MediaProvider() {
         artistId: String,
         count: Int?
     ): List<MediaModel.Song> {
-        TODO("Not yet implemented")
+        return service.getSimilarSongs2(id = artistId, count = count)
+            .subsonicResponse.similarSongs2?.song?.map { it.toMediaModel(this.id) } ?: emptyList()
     }
 
     override suspend fun getDownloadUrl(id: String): String {
@@ -618,7 +620,10 @@ open class SubsonicMediaProvider : MediaProvider() {
         count: Int?,
         musicFolderId: List<String>?
     ): List<MediaModel.Song> {
-        TODO("Not yet implemented")
+        // The endpoint takes no musicFolderId - unlike the list endpoints, similarity is not
+        // scoped to a library - so the parameter exists only to satisfy the abstract signature.
+        return service.getSimilarSongs(id = songId, count = count)
+            .subsonicResponse.similarSongs?.song?.map { it.toMediaModel(this.id) } ?: emptyList()
     }
 
     override suspend fun getSongDetail(id: String): MediaModel.Song {
