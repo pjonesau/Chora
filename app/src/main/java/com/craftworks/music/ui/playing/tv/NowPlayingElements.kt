@@ -373,15 +373,19 @@ fun LyricsToggleButton(
 
 @Composable
 fun FlagLyricsButton(
+    flagged: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     TvActionButton(
         icon = ImageVector.vectorResource(R.drawable.rounded_flag_24),
-        label = stringResource(R.string.now_playing_lyrics_flag_short),
+        label = stringResource(
+            if (flagged) R.string.now_playing_lyrics_flagged_short else R.string.now_playing_lyrics_flag_short
+        ),
         onClick = onClick,
         modifier = modifier,
+        active = flagged,
         dimmed = !enabled,
     )
 }
