@@ -53,6 +53,7 @@ import com.craftworks.music.data.repository.LyricsRepository
 import com.craftworks.music.data.repository.PlaylistRepository
 import com.craftworks.music.data.repository.RadioRepository
 import com.craftworks.music.data.repository.SongRepository
+import com.craftworks.music.data.providers.media.subsonic.SubsonicMediaProvider
 import com.craftworks.music.managers.MediaProviderManager
 import com.craftworks.music.managers.TranscodeManager
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
@@ -78,6 +79,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import okhttp3.Call
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
@@ -271,14 +274,24 @@ class ChoraMediaLibraryService : MediaLibraryService() {
             init(null, trustAllCerts, SecureRandom())
         }
 
-        val okHttpDataSourceFactory = OkHttpDataSource.Factory(
-            OkHttpClient.Builder()
-                .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
-                .hostnameVerifier(HostnameVerifier { _, _ -> true })
-                .followRedirects(true)
-                .followSslRedirects(true)
-                .build()
-        )
+        // Certificates are only skipped for servers whose provider has allowSelfSignedCert set,
+        // as with the providers' own API clients - every other host gets the normal checks.
+        val strictClient = OkHttpClient.Builder()
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .build()
+        val trustAllClient = strictClient.newBuilder()
+            .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
+            .hostnameVerifier(HostnameVerifier { _, _ -> true })
+            .build()
+
+        val okHttpDataSourceFactory = OkHttpDataSource.Factory(Call.Factory { request ->
+            val selfSigned = MediaProviderManager.allProviders.value.any {
+                it is SubsonicMediaProvider && it.providerData.allowSelfSignedCert &&
+                        it.providerData.url.toHttpUrlOrNull()?.host == request.url.host
+            }
+            (if (selfSigned) trustAllClient else strictClient).newCall(request)
+        })
 
         var seekPosMs: Long? = null
         val resolvingDataSourceFactory = ResolvingDataSource.Factory(
