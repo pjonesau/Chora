@@ -1,5 +1,8 @@
 package com.craftworks.music.ui.screens
 
+import com.craftworks.music.data.model.providerId
+import com.craftworks.music.data.model.LibraryType
+import com.craftworks.music.managers.FavoriteManager
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -143,7 +146,12 @@ fun AlbumDetails(
         visible = currentAlbum.isNotEmpty(),
         enter = fadeIn()
     ) {
-        var isStarred by remember { mutableStateOf(currentAlbum[0].mediaMetadata.favorite ?: false) }
+        val albumFavorite = FavoriteManager.rememberFavorite(
+            LibraryType.ALBUM,
+            currentAlbum[0].mediaMetadata.providerId,
+            currentAlbum[0].mediaMetadata.id,
+            currentAlbum[0].mediaMetadata.favorite
+        )
         val requester = remember { FocusRequester() }
 
         val coroutineScope = rememberCoroutineScope()
@@ -270,22 +278,7 @@ fun AlbumDetails(
                                             )
                                         }
                                     },
-                                    ActionButtonType.FAVORITE to {
-                                        coroutineScope.launch {
-                                            if (isStarred)
-                                                currentAlbum[0].mediaMetadata.id?.let {
-                                                    viewModel.unstarAlbum(it)
-                                                }
-                                            else
-                                                currentAlbum[0].mediaMetadata.id?.let {
-                                                    viewModel.starAlbum(it)
-                                                }
-                                            viewModel.loadAlbumDetails(
-                                                selectedAlbumId
-                                            )
-                                            isStarred = !isStarred
-                                        }
-                                    },
+                                    ActionButtonType.FAVORITE to albumFavorite.toggle,
                                     ActionButtonType.ADD_TO_QUEUE to {
                                         coroutineScope.launch {
                                             SongHelper.enqueue(
@@ -328,7 +321,7 @@ fun AlbumDetails(
                                             )
                                         }
                                     },
-                                    isStarred = isStarred
+                                    isStarred = albumFavorite.isFavorite
                                 )
                             }
                         }

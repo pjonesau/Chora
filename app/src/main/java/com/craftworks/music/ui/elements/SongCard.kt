@@ -59,6 +59,7 @@ import com.craftworks.music.data.model.ProviderFeature
 import com.craftworks.music.data.model.ProviderType
 import com.craftworks.music.data.model.getProvider
 import com.craftworks.music.data.model.id
+import com.craftworks.music.managers.FavoriteManager
 import com.craftworks.music.data.model.providerType
 import com.craftworks.music.player.SongHelper
 import com.craftworks.music.ui.elements.dialogs.AddToPlaylist
@@ -81,6 +82,7 @@ fun HorizontalSongCard(
 
     var showAddSongToPlaylistDialog by remember { mutableStateOf(false) }
     var showSongRatingDialog by remember { mutableStateOf(false) }
+    val favorite = FavoriteManager.rememberFavorite(song)
 
     Card(
         onClick = onClick,
@@ -168,6 +170,15 @@ fun HorizontalSongCard(
                             imageVector = ImageVector.vectorResource(R.drawable.rounded_explicit_24),
                             contentDescription = "Explicit"
                         )
+                    if (favorite.isFavorite)
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.round_favorite_24),
+                            contentDescription = stringResource(R.string.action_favorited),
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .padding(start = 6.dp)
+                                .size(16.dp)
+                        )
                 }
 
                 Text(
@@ -233,6 +244,31 @@ fun HorizontalSongCard(
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
                 ) {
+                    if (favorite.available) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(
+                                        if (favorite.isFavorite) R.string.action_remove_from_favorites
+                                        else R.string.action_add_to_favorites
+                                    )
+                                )
+                            },
+                            onClick = {
+                                favorite.toggle()
+                                expanded = false
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = ImageVector.vectorResource(
+                                        if (favorite.isFavorite) R.drawable.round_favorite_24
+                                        else R.drawable.round_favorite_border_24
+                                    ),
+                                    contentDescription = null
+                                )
+                            }
+                        )
+                    }
                     DropdownMenuItem(
                         text = {
                             Text(stringResource(R.string.action_set_rating))

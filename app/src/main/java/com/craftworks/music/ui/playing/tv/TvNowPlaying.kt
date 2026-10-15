@@ -84,6 +84,7 @@ import com.craftworks.music.data.model.id
 import com.craftworks.music.data.model.providerId
 import com.craftworks.music.ui.elements.dialogs.tv.GoToDialog
 import com.craftworks.music.data.repository.LyricsState
+import com.craftworks.music.managers.FavoriteManager
 import com.craftworks.music.managers.MediaProviderManager
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
 import com.craftworks.music.managers.settings.OLEDProtectionMode
@@ -154,6 +155,7 @@ fun TvNowPlaying(
         OLEDProtectionMode.OFF
     )
     val lyricsFlagged by LyricsFlags.rememberFlagged(metadata, lyrics)
+    val favorite = FavoriteManager.rememberFavorite(metadata)
     val lyricsVisible by appearanceSettingsManager.tvLyricsVisibleFlow.collectAsStateWithLifecycle(true)
 
     DisposableEffect(mediaController) {
@@ -423,7 +425,7 @@ fun TvNowPlaying(
         ) {
             Column(
                 modifier = Modifier
-                    .widthIn(max = 560.dp)
+                    .widthIn(max = 680.dp)
                     .fillMaxWidth()
                     .wrapContentHeight()
                     .focusGroup()
@@ -554,6 +556,15 @@ fun TvNowPlaying(
                                 modifier = Modifier
                             )
                         }
+
+                        if (favorite.available)
+                            FavoriteButton(
+                                favorite = favorite.isFavorite,
+                                onClick = {
+                                    favorite.toggle()
+                                    interactionFlow.tryEmit(Unit)
+                                }
+                            )
 
                         PlayQueueButton(
                             onClick = {

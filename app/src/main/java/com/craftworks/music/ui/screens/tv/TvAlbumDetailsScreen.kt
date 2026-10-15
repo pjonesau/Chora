@@ -58,6 +58,7 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Icon
+import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
@@ -69,6 +70,8 @@ import com.craftworks.music.R
 import com.craftworks.music.data.model.LibraryType
 import com.craftworks.music.data.model.Screen
 import com.craftworks.music.data.model.favorite
+import com.craftworks.music.data.model.providerId
+import com.craftworks.music.managers.FavoriteManager
 import com.craftworks.music.data.model.getProvider
 import com.craftworks.music.data.model.id
 import com.craftworks.music.managers.MediaProviderManager
@@ -136,11 +139,12 @@ fun TvAlbumDetails(
         val playRequester = remember { FocusRequester() }
         val trackListRequester = remember { FocusRequester() }
 
-        var isStarred by remember {
-            mutableStateOf(
-                currentAlbum[0].mediaMetadata.favorite ?: false
-            )
-        }
+        val albumFavorite = FavoriteManager.rememberFavorite(
+            LibraryType.ALBUM,
+            currentAlbum[0].mediaMetadata.providerId,
+            currentAlbum[0].mediaMetadata.id,
+            currentAlbum[0].mediaMetadata.favorite
+        )
 
         LaunchedEffect(Unit) { focusRestore.restore(playRequester) }
 
@@ -252,28 +256,51 @@ fun TvAlbumDetails(
                         Text(stringResource(R.string.action_play))
                     }
 
-                    OutlinedButton(
-                        onClick = {
-                            coroutineScope.launch {
-                                SongHelper.shuffle(
-                                    currentAlbum.subList(1, currentAlbum.size),
-                                    mediaController
-                                )
-                                navHostController.navigate(Screen.NowPlayingLandscape) {
-                                    launchSingleTop = true
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                coroutineScope.launch {
+                                    SongHelper.shuffle(
+                                        currentAlbum.subList(1, currentAlbum.size),
+                                        mediaController
+                                    )
+                                    navHostController.navigate(Screen.NowPlayingLandscape) {
+                                        launchSingleTop = true
+                                    }
                                 }
+                            },
+                            modifier = Modifier.weight(1f),
+                            contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+                        ) {
+                            Icon(
+                                ImageVector.vectorResource(R.drawable.round_shuffle_28),
+                                contentDescription = null,
+                                modifier = Modifier.size(ButtonDefaults.IconSize),
+                            )
+                            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                            Text(stringResource(R.string.action_shuffle))
+                        }
+
+                        if (albumFavorite.available)
+                            // Icon only: the column is too short for a third full-width button.
+                            OutlinedButton(
+                                onClick = albumFavorite.toggle,
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                            ) {
+                                Icon(
+                                    ImageVector.vectorResource(
+                                        if (albumFavorite.isFavorite) R.drawable.round_favorite_24
+                                        else R.drawable.round_favorite_border_24
+                                    ),
+                                    contentDescription = stringResource(
+                                        if (albumFavorite.isFavorite) R.string.action_remove_from_favorites
+                                        else R.string.action_add_to_favorites
+                                    ),
+                                    tint = if (albumFavorite.isFavorite) MaterialTheme.colorScheme.primary
+                                    else LocalContentColor.current,
+                                    modifier = Modifier.size(ButtonDefaults.IconSize),
+                                )
                             }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        contentPadding = ButtonDefaults.ButtonWithIconContentPadding
-                    ) {
-                        Icon(
-                            ImageVector.vectorResource(R.drawable.round_shuffle_28),
-                            contentDescription = null,
-                            modifier = Modifier.size(ButtonDefaults.IconSize),
-                        )
-                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                        Text(stringResource(R.string.action_shuffle))
                     }
                 }
             }

@@ -362,6 +362,38 @@ fun PlayQueueButton(
 }
 
 
+/** The heart for the playing song: filled and at full strength while it is a favorite. */
+@Composable
+fun FavoriteButton(
+    color: Color,
+    size: Dp,
+    favorite: Boolean,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .bounceClick()
+            .size(size + 12.dp),
+        contentPadding = PaddingValues(6.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color.Transparent,
+            contentColor = if (favorite) color else color.copy(alpha = 0.5f),
+        )
+    ) {
+        Icon(
+            imageVector = ImageVector.vectorResource(
+                if (favorite) R.drawable.round_favorite_24 else R.drawable.round_favorite_border_24
+            ),
+            contentDescription = stringResource(
+                if (favorite) R.string.action_remove_from_favorites else R.string.action_add_to_favorites
+            ),
+            modifier = Modifier.size(size)
+        )
+    }
+}
+
 @androidx.annotation.OptIn(UnstableApi::class)
 @Composable
 fun DownloadButton(color: Color, size: Dp, metadata: MediaMetadata?, enabled: Boolean, onDownload: () -> Unit) {

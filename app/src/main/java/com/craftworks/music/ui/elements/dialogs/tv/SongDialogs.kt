@@ -67,6 +67,7 @@ import coil3.compose.SubcomposeAsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.craftworks.music.R
+import com.craftworks.music.managers.FavoriteManager
 import com.craftworks.music.ui.viewmodels.PlaylistScreenViewModel
 
 private enum class DialogMenu { MAIN, ADD_TO_PLAYLIST, NEW_PLAYLIST, SET_RATING }
@@ -85,6 +86,7 @@ fun SongDialog(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val favorite = FavoriteManager.rememberFavorite(song)
 
     val backgroundColor = MaterialTheme.colorScheme.surface
 
@@ -154,6 +156,23 @@ fun SongDialog(
 
                 when (dialogMenu) {
                     DialogMenu.MAIN -> {
+                        if (favorite.available)
+                            ListItem(
+                                selected = false,
+                                headlineContent = {
+                                    Text(
+                                        stringResource(
+                                            if (favorite.isFavorite) R.string.action_remove_from_favorites
+                                            else R.string.action_add_to_favorites
+                                        )
+                                    )
+                                },
+                                onClick = {
+                                    favorite.toggle()
+                                    setShowDialog(false)
+                                }
+                            )
+
                         ListItem(
                             selected = false,
                             headlineContent = {

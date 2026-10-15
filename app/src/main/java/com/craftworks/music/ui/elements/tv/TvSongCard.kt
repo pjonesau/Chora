@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -34,6 +35,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.craftworks.music.R
 import com.craftworks.music.data.model.id
+import com.craftworks.music.managers.FavoriteManager
 
 @Preview(showBackground = true, device = "id:tv_1080p")
 @Composable
@@ -47,6 +49,7 @@ fun TvHorizontalSongCard(
     onLongClick: () -> Unit = { }
 ) {
     val context = LocalContext.current
+    val favorite = FavoriteManager.rememberFavorite(song)
     WideCardContainer(
         modifier = modifier,
         imageCard = {
@@ -123,13 +126,23 @@ fun TvHorizontalSongCard(
             )
         },
         description = {
-            if (song.mediaMetadata.userRating == null)
+            val stars = (song.mediaMetadata.userRating as? StarRating)?.starRating?.toInt() ?: 0
+            if (!favorite.isFavorite && stars == 0)
                 return@WideCardContainer
 
             Row (
                 modifier = Modifier.padding(start = 16.dp)
             ) {
-                repeat((song.mediaMetadata.userRating as StarRating).starRating.toInt()) {
+                if (favorite.isFavorite)
+                    Icon(
+                        imageVector = ImageVector.vectorResource(R.drawable.round_favorite_24),
+                        contentDescription = stringResource(R.string.action_favorited),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .padding(end = if (stars > 0) 8.dp else 0.dp)
+                            .size(16.dp)
+                    )
+                repeat(stars) {
                     Icon(
                         imageVector = Icons.Rounded.Star,
                         contentDescription = null,

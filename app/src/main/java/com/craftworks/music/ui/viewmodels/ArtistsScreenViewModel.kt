@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import com.craftworks.music.data.model.AlbumArtistListSort
-import com.craftworks.music.data.model.LibraryType
 import com.craftworks.music.data.model.MediaModel
 import com.craftworks.music.data.model.MediaQuery
 import com.craftworks.music.data.model.SortOrder
@@ -13,7 +12,6 @@ import com.craftworks.music.data.model.id
 import com.craftworks.music.data.repository.AlbumRepository
 import com.craftworks.music.data.repository.ArtistRepository
 import com.craftworks.music.data.repository.SongRepository
-import com.craftworks.music.data.repository.StarredRepository
 import com.craftworks.music.managers.DataRefreshManager
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
 import com.craftworks.music.managers.settings.LocalDataSettingsManager
@@ -37,7 +35,6 @@ class ArtistsScreenViewModel @Inject constructor(
     private val artistRepository: ArtistRepository,
     private val albumRepository: AlbumRepository,
     private val songRepository: SongRepository,
-    private val starredRepository: StarredRepository,
     private val localDataSettingsManager: LocalDataSettingsManager,
     private val miscSettingsManager: MiscSettingsManager,
     appearanceSettingsManager: AppearanceSettingsManager
@@ -265,16 +262,6 @@ class ArtistsScreenViewModel @Inject constructor(
     fun setShowFavoritesOnly(showFavorites: Boolean) {
         viewModelScope.launch {
             localDataSettingsManager.saveShowFavoriteArtist(showFavorites)
-        }
-    }
-    fun starArtist(id: String) {
-        viewModelScope.launch {
-            starredRepository.starItem(listOf(id), LibraryType.ARTIST)
-        }
-    }
-    fun unstarArtist(id: String) {
-        viewModelScope.launch {
-            starredRepository.unStarItem(listOf(id), LibraryType.ARTIST)
         }
     }
     fun downloadArtist(songs: List<MediaItem>) {

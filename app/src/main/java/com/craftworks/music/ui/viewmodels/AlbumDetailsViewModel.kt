@@ -4,11 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.StarRating
-import com.craftworks.music.data.model.LibraryType
 import com.craftworks.music.data.model.id
 import com.craftworks.music.data.repository.AlbumRepository
 import com.craftworks.music.data.repository.SongRepository
-import com.craftworks.music.data.repository.StarredRepository
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
 import com.craftworks.music.managers.settings.MiscSettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,7 +21,6 @@ import javax.inject.Inject
 class AlbumDetailsViewModel @Inject constructor(
     private val albumRepository: AlbumRepository,
     private val songRepository: SongRepository,
-    private val starredRepository: StarredRepository,
     private val miscSettingsManager: MiscSettingsManager,
     appearanceSettingsManager: AppearanceSettingsManager,
 ) : ViewModel() {
@@ -50,16 +47,6 @@ class AlbumDetailsViewModel @Inject constructor(
         }
     }
 
-    fun starAlbum(id: String) {
-        viewModelScope.launch {
-            starredRepository.starItem(listOf(id), LibraryType.ALBUM)
-        }
-    }
-    fun unstarAlbum(id: String) {
-        viewModelScope.launch {
-            starredRepository.unStarItem(listOf(id), LibraryType.ALBUM)
-        }
-    }
 
     fun setSongRating(
         songId: String,

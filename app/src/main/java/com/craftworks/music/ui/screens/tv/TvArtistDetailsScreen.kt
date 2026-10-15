@@ -62,6 +62,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Icon
+import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.OutlinedButton
 import androidx.tv.material3.Text
@@ -71,6 +72,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.craftworks.music.R
 import com.craftworks.music.data.model.LibraryType
+import com.craftworks.music.managers.FavoriteManager
 import com.craftworks.music.data.model.ProviderFeature
 import com.craftworks.music.data.model.Screen
 import com.craftworks.music.data.model.displayYear
@@ -386,6 +388,33 @@ fun TvArtistDetailsScreen(
                                     Text(stringResource(R.string.action_radio))
                                 }
                             }
+
+                            val artistFavorite = FavoriteManager.rememberFavorite(
+                                LibraryType.ARTIST,
+                                artist?.providerId,
+                                artist?.id,
+                                artist?.userFavorite
+                            )
+                            if (artistFavorite.available)
+                                // Icon only: the row already holds three labelled buttons.
+                                OutlinedButton(
+                                    onClick = artistFavorite.toggle,
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Icon(
+                                        ImageVector.vectorResource(
+                                            if (artistFavorite.isFavorite) R.drawable.round_favorite_24
+                                            else R.drawable.round_favorite_border_24
+                                        ),
+                                        contentDescription = stringResource(
+                                            if (artistFavorite.isFavorite) R.string.action_remove_from_favorites
+                                            else R.string.action_add_to_favorites
+                                        ),
+                                        tint = if (artistFavorite.isFavorite) MaterialTheme.colorScheme.primary
+                                        else LocalContentColor.current,
+                                        modifier = Modifier.size(ButtonDefaults.IconSize),
+                                    )
+                                }
                         }
                     }
                 }

@@ -339,6 +339,23 @@ private fun TvActionButton(
 }
 
 @Composable
+fun FavoriteButton(
+    favorite: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    TvActionButton(
+        icon = ImageVector.vectorResource(
+            if (favorite) R.drawable.round_favorite_24 else R.drawable.round_favorite_border_24
+        ),
+        label = stringResource(if (favorite) R.string.action_favorited else R.string.action_favorite),
+        onClick = onClick,
+        modifier = modifier,
+        active = favorite,
+    )
+}
+
+@Composable
 fun PlayQueueButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier

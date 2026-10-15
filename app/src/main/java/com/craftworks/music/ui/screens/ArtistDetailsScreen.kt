@@ -1,5 +1,7 @@
 package com.craftworks.music.ui.screens
 
+import com.craftworks.music.data.model.LibraryType
+import com.craftworks.music.managers.FavoriteManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -194,7 +196,9 @@ fun ArtistDetails(
         visible = artist?.name?.isNotBlank() == true,
         enter = fadeIn()
     ) {
-        var isStarred by remember { mutableStateOf(artist?.userFavorite ?: false) }
+        val artistFavorite = FavoriteManager.rememberFavorite(
+            LibraryType.ARTIST, artist?.providerId, artist?.id, artist?.userFavorite
+        )
 
         LazyVerticalGrid(
             modifier = Modifier
@@ -299,20 +303,7 @@ fun ArtistDetails(
                                             SongHelper.shuffle(getArtistSongs(), mediaController)
                                         }
                                     },
-                                    ActionButtonType.FAVORITE to {
-                                        coroutineScope.launch {
-                                            artist?.id?.let {
-                                                if (isStarred)
-                                                    viewModel.unstarArtist(it)
-                                                else
-                                                    viewModel.starArtist(it)
-                                            }
-                                            if (selectedArtistId != null) viewModel.loadArtistDetails(
-                                                selectedArtistId
-                                            )
-                                            isStarred = !isStarred
-                                        }
-                                    },
+                                    ActionButtonType.FAVORITE to artistFavorite.toggle,
                                     ActionButtonType.ADD_TO_QUEUE to {
                                         coroutineScope.launch {
                                             SongHelper.enqueue(getArtistSongs(), mediaController)
@@ -352,7 +343,7 @@ fun ArtistDetails(
                                             )
                                         }
                                     },
-                                    isStarred = isStarred
+                                    isStarred = artistFavorite.isFavorite
                                 )
                             }
                         }

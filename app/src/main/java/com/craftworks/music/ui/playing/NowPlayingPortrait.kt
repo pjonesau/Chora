@@ -82,6 +82,7 @@ import com.craftworks.music.data.model.artists
 import com.craftworks.music.data.model.id
 import com.craftworks.music.data.model.providerId
 import com.craftworks.music.data.repository.LyricsState
+import com.craftworks.music.managers.FavoriteManager
 import com.craftworks.music.managers.MediaProviderManager
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
 import com.craftworks.music.player.ChoraMediaLibraryService
@@ -443,6 +444,9 @@ fun NowPlayingPortrait(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val favorite = FavoriteManager.rememberFavorite(metadata)
+            if (favorite.available)
+                FavoriteButton(iconTextColor, 32.dp, favorite.isFavorite, favorite.toggle)
             DownloadButton(
                 iconTextColor,
                 32.dp,

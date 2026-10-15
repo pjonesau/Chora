@@ -21,6 +21,9 @@
     <string name="action_add_to_playlist">Add To Playlist</string>
     <string name="action_add_to_favorites">Add To Favorites</string>
     <string name="action_remove_from_favorites">Remove From Favorites</string>
+    <string name="action_favorite">Favorite</string>
+    <string name="action_favorited">Favorited</string>
+    <string name="favorite_failed">Could not update the favorite</string>
     <string name="action_set_rating">Set Rating</string>
     <string name="action_next">Next</string>
     <string name="action_skip_for_now">Skip for now</string>
