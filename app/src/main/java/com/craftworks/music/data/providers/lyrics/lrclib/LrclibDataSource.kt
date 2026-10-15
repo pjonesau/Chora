@@ -149,13 +149,41 @@ class LrclibDataSource @Inject constructor(
         durationMs: Long?,
         durationToleranceSeconds: Int,
         ignoreCachedResponse: Boolean
+    ): Lyrics? {
+        searchTimedLyricsOnce(baseUrl, artist, title, title, album, durationMs, durationToleranceSeconds, ignoreCachedResponse)
+            ?.let { return it }
+
+        // LRCLIB matches track_name literally, so a title carrying its version suffix
+        // ("Total Eclipse of the Heart (New radio edit mix)") finds nothing even though the
+        // database holds the recording under the bare name. Ask again without the bracketed
+        // parts; what comes back is still matched against the name we were given, so the
+        // suffix costs nothing but the extra request.
+        val shorn = title
+            .replace(bracketedPart, " ")
+            .replace(whitespaceRun, " ")
+            .trim()
+        if (shorn.isEmpty() || shorn == title) return null
+
+        Log.d("LRCLIB", "search for \"$title\" found nothing; looking again for \"$shorn\"")
+        return searchTimedLyricsOnce(baseUrl, artist, shorn, title, album, durationMs, durationToleranceSeconds, ignoreCachedResponse)
+    }
+
+    private suspend fun searchTimedLyricsOnce(
+        baseUrl: String,
+        artist: String?,
+        queryTitle: String,
+        matchTitle: String,
+        album: String?,
+        durationMs: Long?,
+        durationToleranceSeconds: Int,
+        ignoreCachedResponse: Boolean
     ): Lyrics? = try {
         val results: List<LrcLibLyrics> = client.get(baseUrl) {
             url {
                 appendPathSegments("api", "search")
             }
 
-            parameter("track_name", title)
+            parameter("track_name", queryTitle)
             artist?.let { parameter("artist_name", it) }
 
             header(HttpHeaders.UserAgent, UserAgent)
@@ -166,9 +194,9 @@ class LrclibDataSource @Inject constructor(
         // discarding. Artist is a ranking input rather than a filter: a hard filter would drop
         // compilations and Various Artists entries that are the right recording all the same.
         val withinTolerance = results.filter {
-            it.trackName.isSameAs(title) && durationWithinTolerance(durationMs, it.duration, durationToleranceSeconds)
+            it.trackName.isSameAs(matchTitle) && durationWithinTolerance(durationMs, it.duration, durationToleranceSeconds)
         }
-        Log.d("LRCLIB", "search for \"$title\": ${results.size} results, ${withinTolerance.size} within ±${durationToleranceSeconds}s")
+        Log.d("LRCLIB", "search \"$queryTitle\": ${results.size} results, ${withinTolerance.size} within ±${durationToleranceSeconds}s")
 
         withinTolerance
             .sortedWith(
@@ -187,6 +215,9 @@ class LrclibDataSource @Inject constructor(
         null
     }
 }
+
+private val bracketedPart = Regex("""\s*[(\[][^()\[\]]*[)\]]""")
+private val whitespaceRun = Regex("""\s+""")
 
 private fun HttpRequestBuilder.cacheHeader(ignoreCachedResponse: Boolean) {
     if (ignoreCachedResponse)
