@@ -86,7 +86,18 @@ If you are looking for something well-tested, upstream's releases are the safe c
 - **The TV player can hide its lyrics pane**, from a button in the transport row that
   remembers the choice, and **open the playing track's album or artist** from the same
   row. The go-to button offers the two screens on top of the player, so Back returns to
-  the music; it dims when there is nothing to open, as on a radio station.
+  the music; it dims when there is nothing to open, as on a radio station. It opens with
+  focus on the artist, so one press reaches it.
+- **Radio stations show their logos.** Navidrome stores an uploaded image per station;
+  the cards, Now Playing and Android Auto use it now instead of one placeholder for
+  every station. A station without one gets a tile coloured from its name and labelled
+  with its frequency or name. The TV radio screen reloads on each visit, so a new logo
+  shows without restarting the app.
+- **Radio Now Playing shows the song on air.** Where a stream names the current song in
+  its ICY metadata, Now Playing (TV, phone and the mini player) shows it above the
+  station's name, instead of "null"; otherwise the station shows with its genre. Ad-break
+  markers and the station's own name are not taken for songs, and a title expires after
+  eight minutes, since most stations send one only on a change.
 
 ### Fixes
 
@@ -135,6 +146,13 @@ If you are looking for something well-tested, upstream's releases are the safe c
   literally, so "Total Eclipse of the Heart (New radio edit mix)" found nothing even
   though the recording was in the database, and the exact-signature lookup 404s for the
   same reason. An empty search is repeated once with the bracketed parts dropped.
+- **LRCLIB being busy no longer costs a track its lyrics.** It sheds load with a 503,
+  and since failures are not cached, the track stayed without lyrics until it was played
+  again. Lookups now back off and retry up to three times — 1, 2 then 4 seconds, or
+  longer when the server asks.
+- **Scrobbles carry the time they were played.** Chora sent the playback position as the
+  scrobble's timestamp, so Navidrome dated every play a few minutes into 1 January 1970,
+  and nothing played through Chora ever appeared in its recently-played list.
 - **TV settings that used sliders now have buttons.** A material3 slider cannot be
   steered from a remote at all — its own arrow-key handling takes the presses before the
   screen's does — so both the lyrics tolerance and the scrobble percentage were visible
