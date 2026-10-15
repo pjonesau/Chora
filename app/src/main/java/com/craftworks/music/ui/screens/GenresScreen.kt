@@ -49,7 +49,8 @@ fun GenresScreen(
     navHostController: NavHostController,
     viewModel: GenresScreenViewModel = hiltViewModel()
 ) {
-    val allGenresList by viewModel.allGenres.collectAsStateWithLifecycle()
+    val displayGenres by viewModel.displayGenres.collectAsStateWithLifecycle()
+    val otherGenres by viewModel.otherGenres.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
     val artwork by viewModel.genreArtwork.collectAsStateWithLifecycle()
 
@@ -76,6 +77,14 @@ fun GenresScreen(
 
     val openGenre: (String) -> Unit = { genreName ->
         navHostController.navigate(Screen.GenreDetails(genreName)) { launchSingleTop = true }
+    }
+
+    // The group card has no albums of its own, so it opens the genres behind it instead.
+    val openGenreCard: (com.craftworks.music.data.model.MediaModel.Genre) -> Unit = { genre ->
+        if (genre.name == com.craftworks.music.data.model.MediaModel.Genre.OTHER_NAME)
+            navHostController.navigate(Screen.OtherGenres) { launchSingleTop = true }
+        else
+            openGenre(genre.name)
     }
 
     PullToRefreshBox(
@@ -156,10 +165,11 @@ fun GenresScreen(
                     .padding(top = innerPadding.calculateTopPadding())
             ) {
                 GenreGrid(
-                    genres = allGenresList,
+                    genres = displayGenres,
                     artwork = artwork,
-                    onGenreSelected = { openGenre(it.name) },
-                    onGenreVisible = { viewModel.loadGenreArtwork(it) }
+                    onGenreSelected = openGenreCard,
+                    onGenreVisible = { viewModel.loadGenreArtwork(it) },
+                    groupSize = otherGenres.size
                 )
             }
         }
@@ -178,7 +188,8 @@ fun GenreGrid(
     genres: List<com.craftworks.music.data.model.MediaModel.Genre>,
     artwork: Map<String, List<com.craftworks.music.data.repository.GenreRepository.GenreArtwork>>,
     onGenreSelected: (com.craftworks.music.data.model.MediaModel.Genre) -> Unit,
-    onGenreVisible: (com.craftworks.music.data.model.MediaModel.Genre) -> Unit
+    onGenreVisible: (com.craftworks.music.data.model.MediaModel.Genre) -> Unit,
+    groupSize: Int? = null
 ) {
     LazyVerticalGrid(
         columns = GridCells.Adaptive(150.dp),
@@ -191,7 +202,8 @@ fun GenreGrid(
                 genre = genre,
                 artwork = artwork[genre.name].orEmpty(),
                 onClick = { onGenreSelected(genre) },
-                onArtworkRequest = onGenreVisible
+                onArtworkRequest = onGenreVisible,
+                groupSize = groupSize
             )
         }
     }

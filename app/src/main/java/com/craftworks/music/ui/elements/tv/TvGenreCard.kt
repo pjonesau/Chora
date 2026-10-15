@@ -19,6 +19,7 @@ import com.craftworks.music.data.model.MediaModel
 import com.craftworks.music.data.repository.GenreRepository
 import com.craftworks.music.ui.elements.GenreCollage
 import com.craftworks.music.ui.elements.genreDisplayName
+import com.craftworks.music.ui.elements.genreSubtitle
 
 @OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
@@ -27,7 +28,8 @@ fun TvGenreCard(
     artwork: List<GenreRepository.GenreArtwork>,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onArtworkRequest: (MediaModel.Genre) -> Unit = {}
+    onArtworkRequest: (MediaModel.Genre) -> Unit = {},
+    groupSize: Int? = null
 ) {
     // Composed only while the card is on screen, so off-screen genres cost no request.
     LaunchedEffect(genre.name) { onArtworkRequest(genre) }
@@ -59,11 +61,7 @@ fun TvGenreCard(
         },
         subtitle = {
             Text(
-                text = stringResource(
-                    R.string.genre_song_album_count,
-                    genre.songCount ?: 0,
-                    genre.albumCount ?: 0
-                ),
+                text = genreSubtitle(genre, groupSize),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )

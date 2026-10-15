@@ -8,6 +8,8 @@ import com.craftworks.music.data.model.MediaQuery
 import com.craftworks.music.data.model.SongListSort
 import com.craftworks.music.data.model.SortOrder
 import com.craftworks.music.managers.MediaProviderManager
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -65,6 +67,36 @@ class GenreRepository @Inject constructor() {
         ).mapNotNull { album ->
             album.imageId?.let { GenreArtwork(album.id, provider.getImageUrl(it, LibraryType.ALBUM, 300)) }
         }
+    }
+
+    /**
+     * Covers for the "Other" card, which stands for a whole group of genres: one album from
+     * each of the first [count] genres, so the collage shows the spread of what is behind it
+     * instead of six albums from one of them.
+     */
+    suspend fun getGroupArtwork(
+        genres: List<MediaModel.Genre>,
+        count: Int = 6
+    ): List<GenreArtwork> = coroutineScope {
+        val provider = MediaProviderManager.currentProvider.value ?: return@coroutineScope emptyList()
+
+        genres.take(count).map { genre ->
+            async {
+                provider.getAlbumList(
+                    MediaQuery.AlbumListQuery(
+                        sortBy = AlbumListSort.NAME,
+                        sortOrder = SortOrder.ASC,
+                        genreIds = listOf(genre.name),
+                        limit = 1,
+                        startIndex = 0
+                    )
+                ).firstOrNull()?.let { album ->
+                    album.imageId?.let {
+                        GenreArtwork(album.id, provider.getImageUrl(it, LibraryType.ALBUM, 300))
+                    }
+                }
+            }
+        }.awaitAll().filterNotNull()
     }
 
     /**

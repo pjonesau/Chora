@@ -35,8 +35,11 @@ import androidx.tv.material3.Text
 import com.craftworks.music.R
 import com.craftworks.music.managers.settings.AppTheme
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
+import com.craftworks.music.managers.settings.GenreGrouping
+import com.craftworks.music.managers.settings.LocalDataSettingsManager
 import com.craftworks.music.managers.settings.OLEDProtectionMode
 import com.craftworks.music.ui.elements.dialogs.tv.BackgroundDialog
+import com.craftworks.music.ui.elements.dialogs.tv.GenreGroupingDialog
 import com.craftworks.music.ui.elements.dialogs.tv.HomeItemsDialog
 import com.craftworks.music.ui.elements.dialogs.tv.NameDialog
 import com.craftworks.music.ui.elements.dialogs.tv.NavbarItemsDialog
@@ -57,6 +60,7 @@ fun TvS_AppearanceScreen() {
     var showThemesDialog by remember { mutableStateOf(false) }
     var showNavbarItemsDialog by remember { mutableStateOf(false) }
     var showHomeItemsDialog by remember { mutableStateOf(false) }
+    var showGenreGroupingDialog by remember { mutableStateOf(false) }
     var showNowPlayingLyricsAlignmentDialog by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
@@ -189,6 +193,21 @@ fun TvS_AppearanceScreen() {
                         .joinToString(","),
                     icon = ImageVector.vectorResource(R.drawable.s_a_home_items),
                     onClick = { showHomeItemsDialog = true }
+                )
+
+                // Genre Grouping
+                val genreGrouping by LocalDataSettingsManager(context).genreGrouping.collectAsState(
+                    GenreGrouping.UNDER_5
+                )
+
+                SettingsButtonItem(
+                    title = stringResource(R.string.appearance_genre_grouping),
+                    subtitle = if (genreGrouping == GenreGrouping.OFF)
+                        stringResource(R.string.genre_grouping_off)
+                    else
+                        stringResource(R.string.genre_grouping_under, genreGrouping.groupBelow),
+                    icon = ImageVector.vectorResource(R.drawable.rounded_genre_24),
+                    onClick = { showGenreGroupingDialog = true }
                 )
 
                 // Now Playing Lyrics Alignment
@@ -392,6 +411,7 @@ fun TvS_AppearanceScreen() {
     if (showThemesDialog) ThemeDialog(setShowDialog = { showThemesDialog = it })
     if (showNavbarItemsDialog) NavbarItemsDialog(setShowDialog = { showNavbarItemsDialog = it })
     if (showHomeItemsDialog) HomeItemsDialog(setShowDialog = { showHomeItemsDialog = it })
+    if (showGenreGroupingDialog) GenreGroupingDialog(setShowDialog = { showGenreGroupingDialog = it })
     if (showNowPlayingLyricsAlignmentDialog) NowPlayingAlignmentDialog(
         setShowDialog = { showNowPlayingLyricsAlignmentDialog = it },
         selection = nowPlayingTitleAlignment,
