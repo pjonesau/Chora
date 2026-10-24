@@ -35,7 +35,7 @@ android {
         applicationId = "com.craftworks.music"
         minSdk = 24
         targetSdk = 37
-        versionCode = 311
+        versionCode = 312
         versionName = "1.31.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
