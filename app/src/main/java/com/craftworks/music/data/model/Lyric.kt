@@ -20,14 +20,16 @@ enum class SyncType {
 }
 
 enum class LyricSource{
-    MEDIA_PROVIDER, LRCLIB, LRCRED, UNISON, NETEASE;
+    // BINI_LYRICS is Lrc.Red under its old name. The name is what the stored lyrics settings and the
+    // flagged-lyrics records hold, so renaming it would silently reset the one and orphan the other.
+    MEDIA_PROVIDER, LRCLIB, BINI_LYRICS, UNISON, NETEASE;
 
     val displayName: String
         @Composable
         get() = when (this) {
             MEDIA_PROVIDER -> stringResource(R.string.settings_media_providers)
             LRCLIB -> "LRCLIB"
-            LRCRED -> "Lrc.Red"
+            BINI_LYRICS -> "Lrc.Red"
             UNISON -> "Unison"
             NETEASE -> "NetEase"
         }
@@ -36,7 +38,7 @@ enum class LyricSource{
         get() = when (this) {
             MEDIA_PROVIDER -> R.drawable.s_m_media_providers
             LRCLIB -> R.drawable.lrclib_logo
-            LRCRED -> R.drawable.lrcred_logo
+            BINI_LYRICS -> R.drawable.lrcred_logo
             UNISON -> R.drawable.unison_logo
             NETEASE -> R.drawable.netease_cloud_music
         }

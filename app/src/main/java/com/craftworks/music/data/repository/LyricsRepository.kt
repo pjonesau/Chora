@@ -58,7 +58,7 @@ class LyricsRepository @Inject constructor(
                             when (it.source) {
                                 LyricSource.MEDIA_PROVIDER -> metadata?.id?.let { metadata.getProvider()?.getLyrics(it) }?.firstOrNull()
                                 LyricSource.LRCLIB -> lrclibDataSource.getLyrics(metadata, ignoreCachedResponse)
-                                LyricSource.LRCRED -> lrcRedDataSource.getLyrics(metadata, ignoreCachedResponse)
+                                LyricSource.BINI_LYRICS -> lrcRedDataSource.getLyrics(metadata, ignoreCachedResponse)
                                 LyricSource.UNISON -> unisonLyricsDataSource.getLyrics(metadata, ignoreCachedResponse)
                                 LyricSource.NETEASE -> neteaseDataSource.getLyrics(metadata)
                             }

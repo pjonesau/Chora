@@ -71,18 +71,8 @@ class LrcRedDataSource @Inject constructor(
 
         try {
             if (!isrc.isNullOrEmpty()) {
-                val response = client.get("https://lrc.red/s/$isrc.ttml") {
-                    header(
-                        HttpHeaders.UserAgent,
-                        "Chora - Navidrome Client (https://github.com/CraftWorksMC/Chora)"
-                    )
-
-                    if (ignoreCachedResponse)
-                        header(HttpHeaders.CacheControl, "no-cache")
-                    else
-                        header(HttpHeaders.CacheControl, "max-stale=2592000")
-                }.bodyAsText()
-                val ttml = parseTtml(response, LyricSource.LRCRED)
+                val response = client.get("https://lrc.red/s/$isrc.ttml").bodyAsText()
+                val ttml = parseTtml(response, LyricSource.BINI_LYRICS)
                 return@withContext ttml
             } else {
                 val response = client.get("https://lrc.red/search.json") {
