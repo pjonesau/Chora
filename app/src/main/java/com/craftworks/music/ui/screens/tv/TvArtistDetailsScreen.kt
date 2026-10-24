@@ -205,7 +205,9 @@ fun TvArtistDetailsScreen(
                             .data(
                                 currentProvider?.getImageUrl(
                                     id = selectedArtistId ?: "",
-                                    itemType = LibraryType.ALBUM_ARTIST
+                                    itemType = LibraryType.ALBUM_ARTIST,
+                                    // 240dp is ~480px on a 1080p TV, as on the album page
+                                    size = 600
                                 ) ?: "android.resource://com.craftworks.music/${R.drawable.placeholder}"
                             )
                             .diskCacheKey(selectedArtistId)
