@@ -14,6 +14,7 @@ import com.craftworks.music.managers.DataRefreshManager
 import com.craftworks.music.managers.MediaProviderManager
 import com.craftworks.music.managers.settings.GenreGrouping
 import com.craftworks.music.managers.settings.LocalDataSettingsManager
+import com.craftworks.music.utils.LogFailures
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -86,7 +87,7 @@ class GenresScreenViewModel @Inject constructor(
     private val artworkSemaphore = Semaphore(4)
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             combine(
                 localDataSettingsManager.sortGenre,
                 localDataSettingsManager.sortGenreOrder
@@ -101,7 +102,7 @@ class GenresScreenViewModel @Inject constructor(
                 }
         }
 
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             localDataSettingsManager.genreGrouping
                 .distinctUntilChanged()
                 .collect { grouping ->
@@ -111,7 +112,7 @@ class GenresScreenViewModel @Inject constructor(
                 }
         }
 
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             DataRefreshManager.dataSourceChangedEvent.collect {
                 // Collages and the open genre belong to the provider that is being replaced.
                 _genreArtwork.value = emptyMap()
@@ -127,7 +128,7 @@ class GenresScreenViewModel @Inject constructor(
     fun getGenres() {
         getGenresJob?.cancel()
 
-        getGenresJob = viewModelScope.launch {
+        getGenresJob = viewModelScope.launch(LogFailures) {
             try {
                 _isLoading.value = true
                 _allGenres.value = genreRepository.getGenres(
@@ -175,7 +176,7 @@ class GenresScreenViewModel @Inject constructor(
 
         searchJob?.cancel()
 
-        searchJob = viewModelScope.launch {
+        searchJob = viewModelScope.launch(LogFailures) {
             try {
                 _isLoading.value = true
                 _searchResults.value = genreRepository.getGenres(
@@ -203,7 +204,7 @@ class GenresScreenViewModel @Inject constructor(
         if (_genreArtwork.value.containsKey(key)) return
         synchronized(artworkInFlight) { if (!artworkInFlight.add(key)) return }
 
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             try {
                 val artwork = artworkSemaphore.withPermit {
                     // The group card is not a genre, so its collage is assembled from the
@@ -232,7 +233,7 @@ class GenresScreenViewModel @Inject constructor(
             ?: _searchResults.value.firstOrNull { it.name == genreName }
             ?: MediaModel.Genre(name = genreName)
 
-        getAlbumsJob = viewModelScope.launch {
+        getAlbumsJob = viewModelScope.launch(LogFailures) {
             try {
                 _isLoadingAlbums.value = true
                 _genreAlbums.value = genreRepository.getGenreAlbums(genreName, startIndex = 0, limit = 50)
@@ -247,7 +248,7 @@ class GenresScreenViewModel @Inject constructor(
         val genreName = _selectedGenre.value?.name ?: return
         if (_isLoadingAlbums.value || getAlbumsJob?.isActive == true) return
 
-        getAlbumsJob = viewModelScope.launch {
+        getAlbumsJob = viewModelScope.launch(LogFailures) {
             try {
                 _isLoadingAlbums.value = true
                 _genreAlbums.value += genreRepository.getGenreAlbums(
@@ -273,13 +274,13 @@ class GenresScreenViewModel @Inject constructor(
     }
 
     fun setSorting(sort: GenreListSort) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             localDataSettingsManager.saveSortGenre(sort)
         }
     }
 
     fun setOrder(sortOrder: SortOrder) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             localDataSettingsManager.saveSortGenreOrder(sortOrder)
         }
     }

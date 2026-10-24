@@ -16,6 +16,7 @@ import com.craftworks.music.managers.DataRefreshManager
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
 import com.craftworks.music.managers.settings.LocalDataSettingsManager
 import com.craftworks.music.managers.settings.MiscSettingsManager
+import com.craftworks.music.utils.LogFailures
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -69,7 +70,7 @@ class ArtistsScreenViewModel @Inject constructor(
     val actionButtons = appearanceSettingsManager.artistDetailsButtons
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             combine(
                 localDataSettingsManager.sortArtist,
                 localDataSettingsManager.sortArtistOrder,
@@ -84,7 +85,7 @@ class ArtistsScreenViewModel @Inject constructor(
                 }
         }
 
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             DataRefreshManager.dataSourceChangedEvent.collect {
                 getArtists()
             }
@@ -95,7 +96,7 @@ class ArtistsScreenViewModel @Inject constructor(
     fun getArtists() {
         getArtistsJob?.cancel()
 
-        getArtistsJob = viewModelScope.launch {
+        getArtistsJob = viewModelScope.launch(LogFailures) {
             try {
                 _isLoading.value = true
                 _allArtists.value = artistRepository.getArtists(
@@ -117,7 +118,7 @@ class ArtistsScreenViewModel @Inject constructor(
     fun getMoreArtists() {
         if (_isLoading.value || getArtistsJob?.isActive == true) return
 
-        getArtistsJob = viewModelScope.launch {
+        getArtistsJob = viewModelScope.launch(LogFailures) {
             try {
                 _isLoading.value = true
                 _allArtists.value += artistRepository.getArtists(
@@ -152,7 +153,7 @@ class ArtistsScreenViewModel @Inject constructor(
 
         searchJob?.cancel()
 
-        searchJob = viewModelScope.launch {
+        searchJob = viewModelScope.launch(LogFailures) {
             try {
                 _isLoading.value = true
                 _searchResults.value = artistRepository.getArtists(
@@ -214,7 +215,7 @@ class ArtistsScreenViewModel @Inject constructor(
             _artistAppearanceAlbums.value = emptyList()
         }
 
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             val loadingJob = launch {
                 delay(1000)
                 if (_artistAlbums.value.isEmpty()) {
@@ -250,22 +251,22 @@ class ArtistsScreenViewModel @Inject constructor(
         }
     }
     fun setSorting(newSort: AlbumArtistListSort) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             localDataSettingsManager.saveSortArtist(newSort)
         }
     }
     fun setOrder(newSortOrder: SortOrder) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             localDataSettingsManager.saveSortArtistOrder(newSortOrder)
         }
     }
     fun setShowFavoritesOnly(showFavorites: Boolean) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             localDataSettingsManager.saveShowFavoriteArtist(showFavorites)
         }
     }
     fun downloadArtist(songs: List<MediaItem>) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             val template = miscSettingsManager.downloadTemplateFlow.first()
             songs.forEach { song ->
                 songRepository.downloadSong(song.mediaMetadata, template)

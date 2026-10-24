@@ -8,6 +8,7 @@ import com.craftworks.music.data.model.MediaQuery
 import com.craftworks.music.data.model.SortOrder
 import com.craftworks.music.data.repository.AlbumRepository
 import com.craftworks.music.managers.DataRefreshManager
+import com.craftworks.music.utils.LogFailures
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -39,7 +40,7 @@ class HomeScreenViewModel @Inject constructor(
     init {
         loadHomeScreenData()
 
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             DataRefreshManager.dataSourceChangedEvent.collect {
                 loadHomeScreenData()
             }
@@ -47,36 +48,39 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     fun loadHomeScreenData() {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             _isLoading.value = true
-            coroutineScope {
-                val recentlyPlayedDeferred = async { albumRepository.getAlbums(
-                    MediaQuery.AlbumListQuery(
-                    AlbumListSort.RECENTLY_PLAYED, SortOrder.DESC, limit = 20, startIndex = 0
-                    )
-                ) }
-                val recentDeferred = async { albumRepository.getAlbums(
-                    MediaQuery.AlbumListQuery(
-                        AlbumListSort.RECENTLY_ADDED, SortOrder.DESC, limit = 20, startIndex = 0
-                    )
-                ) }
-                val mostPlayedDeferred = async { albumRepository.getAlbums(
-                    MediaQuery.AlbumListQuery(
-                        AlbumListSort.PLAY_COUNT, SortOrder.DESC, limit = 20, startIndex = 0
-                    )
-                ) }
-                val shuffledDeferred = async { albumRepository.getAlbums(
-                    MediaQuery.AlbumListQuery(
-                        AlbumListSort.RANDOM, SortOrder.ASC, limit = 20, startIndex = 0
-                    )
-                ) }
+            try {
+                coroutineScope {
+                    val recentlyPlayedDeferred = async { albumRepository.getAlbums(
+                        MediaQuery.AlbumListQuery(
+                        AlbumListSort.RECENTLY_PLAYED, SortOrder.DESC, limit = 20, startIndex = 0
+                        )
+                    ) }
+                    val recentDeferred = async { albumRepository.getAlbums(
+                        MediaQuery.AlbumListQuery(
+                            AlbumListSort.RECENTLY_ADDED, SortOrder.DESC, limit = 20, startIndex = 0
+                        )
+                    ) }
+                    val mostPlayedDeferred = async { albumRepository.getAlbums(
+                        MediaQuery.AlbumListQuery(
+                            AlbumListSort.PLAY_COUNT, SortOrder.DESC, limit = 20, startIndex = 0
+                        )
+                    ) }
+                    val shuffledDeferred = async { albumRepository.getAlbums(
+                        MediaQuery.AlbumListQuery(
+                            AlbumListSort.RANDOM, SortOrder.ASC, limit = 20, startIndex = 0
+                        )
+                    ) }
 
-                _recentlyPlayedAlbums.value = recentlyPlayedDeferred.await()
-                _recentAlbums.value = recentDeferred.await()
-                _mostPlayedAlbums.value = mostPlayedDeferred.await()
-                _shuffledAlbums.value = shuffledDeferred.await()
+                    _recentlyPlayedAlbums.value = recentlyPlayedDeferred.await()
+                    _recentAlbums.value = recentDeferred.await()
+                    _mostPlayedAlbums.value = mostPlayedDeferred.await()
+                    _shuffledAlbums.value = shuffledDeferred.await()
+                }
+            } finally {
+                _isLoading.value = false
             }
-            _isLoading.value = false
         }
     }
 

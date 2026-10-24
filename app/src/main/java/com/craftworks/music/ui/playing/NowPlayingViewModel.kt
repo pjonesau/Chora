@@ -25,6 +25,7 @@ import com.craftworks.music.data.repository.SongRepository
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
 import com.craftworks.music.managers.settings.MiscSettingsManager
 import com.craftworks.music.managers.settings.PlaybackSettingsManager
+import com.craftworks.music.utils.LogFailures
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
@@ -79,12 +80,12 @@ class NowPlayingViewModel @Inject constructor (
 
     val autoPlay = playbackSettingsManager.autoPlayFlow
     fun setAutoPlay(autoPlay: Boolean) =
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             playbackSettingsManager.setAutoPlay(autoPlay)
         }
 
     fun refreshLyrics(mediaMetadata: MediaMetadata?) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             lyricsRepository.getLyrics(mediaMetadata, true)
         }
     }
@@ -106,7 +107,7 @@ class NowPlayingViewModel @Inject constructor (
 
         if (uri == null) return
 
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             val palette = extractColorsFromUri(uri.toString(), context)
             val extractedColors = palette.filterNotNull()
             _paletteColors.value = extractedColors
@@ -170,7 +171,7 @@ class NowPlayingViewModel @Inject constructor (
     }
 
     fun downloadSong(metadata: MediaMetadata) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             songRepository.downloadSong(metadata, miscSettingsManager.downloadTemplateFlow.first())
         }
     }

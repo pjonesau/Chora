@@ -12,6 +12,7 @@ import com.craftworks.music.data.repository.SongRepository
 import com.craftworks.music.managers.DataRefreshManager
 import com.craftworks.music.managers.settings.LocalDataSettingsManager
 import com.craftworks.music.managers.settings.MiscSettingsManager
+import com.craftworks.music.utils.LogFailures
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
@@ -50,7 +51,7 @@ class SongsScreenViewModel @Inject constructor(
     val showFavoritesOnly: StateFlow<Boolean> = _showFavoritesOnly.asStateFlow()
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             combine(
                 localDataSettingsManager.sortSong,
                 localDataSettingsManager.sortSongOrder,
@@ -65,7 +66,7 @@ class SongsScreenViewModel @Inject constructor(
                 }
         }
 
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             DataRefreshManager.dataSourceChangedEvent.collect {
                 getSongs()
             }
@@ -76,7 +77,7 @@ class SongsScreenViewModel @Inject constructor(
     fun getSongs() {
         getSongsJob?.cancel()
 
-        getSongsJob = viewModelScope.launch {
+        getSongsJob = viewModelScope.launch(LogFailures) {
             try {
                 _isLoading.value = true
                 _allSongs.value = songRepository.getSongs(
@@ -95,21 +96,24 @@ class SongsScreenViewModel @Inject constructor(
     }
 
     fun getMoreSongs(size: Int){
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             _isLoading.value = true
-            coroutineScope {
-                val songOffset = _allSongs.value.size
-                _allSongs.value += songRepository.getSongs(
-                    MediaQuery.SongListQuery(
-                        sortBy = _sort.value,
-                        sortOrder = _sortOrder.value,
-                        limit = size,
-                        startIndex = songOffset,
-                        favorite = if (_showFavoritesOnly.value) true else null
+            try {
+                coroutineScope {
+                    val songOffset = _allSongs.value.size
+                    _allSongs.value += songRepository.getSongs(
+                        MediaQuery.SongListQuery(
+                            sortBy = _sort.value,
+                            sortOrder = _sortOrder.value,
+                            limit = size,
+                            startIndex = songOffset,
+                            favorite = if (_showFavoritesOnly.value) true else null
+                        )
                     )
-                )
+                }
+            } finally {
+                _isLoading.value = false
             }
-            _isLoading.value = false
         }
     }
 
@@ -118,39 +122,42 @@ class SongsScreenViewModel @Inject constructor(
             _searchResults.value = emptyList()
             return
         }
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             _isLoading.value = true
-            coroutineScope {
-                _searchResults.value = songRepository.getSongs(
-                    MediaQuery.SongListQuery(
-                        sortBy = _sort.value,
-                        sortOrder = _sortOrder.value,
-                        searchTerm = query,
-                        startIndex = 0,
-                        favorite = if (_showFavoritesOnly.value) true else null
+            try {
+                coroutineScope {
+                    _searchResults.value = songRepository.getSongs(
+                        MediaQuery.SongListQuery(
+                            sortBy = _sort.value,
+                            sortOrder = _sortOrder.value,
+                            searchTerm = query,
+                            startIndex = 0,
+                            favorite = if (_showFavoritesOnly.value) true else null
+                        )
                     )
-                )
+                }
+            } finally {
+                _isLoading.value = false
             }
-            _isLoading.value = false
         }
     }
     fun setSorting(newSort: SongListSort) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             localDataSettingsManager.saveSortSong(newSort)
         }
     }
     fun setOrder(newSortOrder: SortOrder) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             localDataSettingsManager.saveSortSongOrder(newSortOrder)
         }
     }
     fun setShowFavoritesOnly(showFavorites: Boolean) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             localDataSettingsManager.saveShowFavoriteSong(showFavorites)
         }
     }
     fun downloadSong(song: MediaItem) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             songRepository.downloadSong(song.mediaMetadata, miscSettingsManager.downloadTemplateFlow.first())
         }
     }
@@ -182,7 +189,7 @@ class SongsScreenViewModel @Inject constructor(
             }
         }
 
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             songRepository.setSongRating(songId, rating)
         }
     }

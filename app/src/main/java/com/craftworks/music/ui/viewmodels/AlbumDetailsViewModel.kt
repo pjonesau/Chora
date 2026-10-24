@@ -9,6 +9,7 @@ import com.craftworks.music.data.repository.AlbumRepository
 import com.craftworks.music.data.repository.SongRepository
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
 import com.craftworks.music.managers.settings.MiscSettingsManager
+import com.craftworks.music.utils.LogFailures
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,17 +34,19 @@ class AlbumDetailsViewModel @Inject constructor(
     val actionButtons = appearanceSettingsManager.albumDetailsButtons
 
     fun loadAlbumDetails(albumId: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             val loadingJob = launch {
                 if (_songsInAlbum.value.isEmpty()) {
                     _isLoading.value = true
                 }
             }
 
-            _songsInAlbum.value = albumRepository.getAlbum(albumId) ?: listOf(MediaItem.EMPTY)
-
-            loadingJob.cancel()
-            _isLoading.value = false
+            try {
+                _songsInAlbum.value = albumRepository.getAlbum(albumId) ?: listOf(MediaItem.EMPTY)
+            } finally {
+                loadingJob.cancel()
+                _isLoading.value = false
+            }
         }
     }
 
@@ -67,19 +70,19 @@ class AlbumDetailsViewModel @Inject constructor(
             if (item.mediaId == song.mediaId) updatedSong else item
         }
 
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             songRepository.setSongRating(songId, rating)
         }
     }
 
     fun downloadSong(song: MediaItem) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             songRepository.downloadSong(song.mediaMetadata, miscSettingsManager.downloadTemplateFlow.first())
         }
     }
 
     fun downloadAlbum(songs: List<MediaItem>) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             val template = miscSettingsManager.downloadTemplateFlow.first()
             songs.forEach { song ->
                 songRepository.downloadSong(song.mediaMetadata, template)

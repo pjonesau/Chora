@@ -1,6 +1,7 @@
 package com.craftworks.music
 
 import android.app.Application
+import com.craftworks.music.managers.DataRefreshManager
 import com.craftworks.music.managers.MediaProviderManager
 import com.craftworks.music.managers.MigrationManager
 import dagger.hilt.android.HiltAndroidApp
@@ -11,5 +12,6 @@ class ChoraApplication : Application(){
         super.onCreate()
         MigrationManager.init(this)
         MediaProviderManager.init(this)
+        DataRefreshManager.watchNetwork(this)
     }
 }

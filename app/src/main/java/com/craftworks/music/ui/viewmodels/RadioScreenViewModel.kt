@@ -7,6 +7,7 @@ import com.craftworks.music.data.model.MediaModel
 import com.craftworks.music.data.model.ProviderType
 import com.craftworks.music.data.repository.RadioRepository
 import com.craftworks.music.managers.DataRefreshManager
+import com.craftworks.music.utils.LogFailures
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,7 +32,7 @@ class RadioScreenViewModel @Inject constructor(
     init {
         getRadioStations()
 
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             DataRefreshManager.dataSourceChangedEvent.collect {
                 getRadioStations()
             }
@@ -39,10 +40,13 @@ class RadioScreenViewModel @Inject constructor(
     }
 
     fun getRadioStations() {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             _isLoading.value = true
-            _radioStations.value = radioRepository.getRadios().map { it.toMediaItem() }
-            _isLoading.value = false
+            try {
+                _radioStations.value = radioRepository.getRadios().map { it.toMediaItem() }
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 
@@ -51,36 +55,45 @@ class RadioScreenViewModel @Inject constructor(
     }
 
     fun addRadioStation(name: String, url: String, homepage: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             _isLoading.value = true
-            radioRepository.createRadio(name = name, streamUrl = url, homepageUrl = homepage)
-            _isLoading.value = false
+            try {
+                radioRepository.createRadio(name = name, streamUrl = url, homepageUrl = homepage)
+            } finally {
+                _isLoading.value = false
+            }
             getRadioStations()
         }
     }
 
     fun modifyRadioStation(providerId: String, providerType: ProviderType, id: String, name: String, url: String, homepage: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             _isLoading.value = true
-            val modifiedRadio = MediaModel.InternetRadioStation(
-                id = id,
-                providerId = providerId,
-                providerType = providerType,
-                name = name,
-                streamUrl =  url,
-                homepageUrl = homepage
-            )
-            radioRepository.modifyRadio(modifiedRadio)
-            _isLoading.value = false
+            try {
+                val modifiedRadio = MediaModel.InternetRadioStation(
+                    id = id,
+                    providerId = providerId,
+                    providerType = providerType,
+                    name = name,
+                    streamUrl =  url,
+                    homepageUrl = homepage
+                )
+                radioRepository.modifyRadio(modifiedRadio)
+            } finally {
+                _isLoading.value = false
+            }
             getRadioStations()
         }
     }
 
     fun deleteRadioStation(providerId: String, id: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             _isLoading.value = true
-            radioRepository.deleteRadio(providerId, id)
-            _isLoading.value = false
+            try {
+                radioRepository.deleteRadio(providerId, id)
+            } finally {
+                _isLoading.value = false
+            }
             getRadioStations()
         }
     }

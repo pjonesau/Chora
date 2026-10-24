@@ -17,6 +17,7 @@ import com.craftworks.music.data.repository.SongRepository
 import com.craftworks.music.managers.DataRefreshManager
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
 import com.craftworks.music.managers.settings.MiscSettingsManager
+import com.craftworks.music.utils.LogFailures
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -51,7 +52,7 @@ class PlaylistScreenViewModel @Inject constructor(
     init {
         loadPlaylists()
 
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             DataRefreshManager.dataSourceChangedEvent.collect {
                 loadPlaylists()
             }
@@ -59,16 +60,19 @@ class PlaylistScreenViewModel @Inject constructor(
     }
 
     fun loadPlaylists() {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             _isLoading.value = true
-            _allPlaylists.value = playlistRepository.getPlaylists(
-                MediaQuery.PlaylistListQuery(
-                    PlaylistListSort.NAME,
-                    SortOrder.ASC,
-                    startIndex = 0
+            try {
+                _allPlaylists.value = playlistRepository.getPlaylists(
+                    MediaQuery.PlaylistListQuery(
+                        PlaylistListSort.NAME,
+                        SortOrder.ASC,
+                        startIndex = 0
+                    )
                 )
-            )
-            _isLoading.value = false
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 
@@ -110,7 +114,7 @@ class PlaylistScreenViewModel @Inject constructor(
 
         println("Fetching playlist details for playlist ID: $playlistId")
 
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             val loadingJob = launch {
                 if (_selectedPlaylistSongs.value.isEmpty()) {
                     _isLoading.value = true
@@ -127,26 +131,32 @@ class PlaylistScreenViewModel @Inject constructor(
     }
 
     fun createPlaylist(name: String, songstoAdd: List<String>, context: Context) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             _isLoading.value = true
-            playlistRepository.createPlaylist(name, "", songstoAdd, false)
-            DataRefreshManager.notifyDataSourcesChanged()
-            _isLoading.value = false
+            try {
+                playlistRepository.createPlaylist(name, "", songstoAdd, false)
+                DataRefreshManager.notifyDataSourcesChanged()
+            } finally {
+                _isLoading.value = false
+            }
             loadPlaylists()
         }
     }
 
     fun addSongsToPlaylist(playlistId: String, songIds: List<String>) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             _isLoading.value = true
-            playlistRepository.addSongsToPlaylist(playlistId, songIds)
-            _isLoading.value = false
+            try {
+                playlistRepository.addSongsToPlaylist(playlistId, songIds)
+            } finally {
+                _isLoading.value = false
+            }
             loadPlaylists()
         }
     }
 
     fun removeSongFromPlaylist(playlistId: String, songId: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             if (_selectedPlaylistSongs.value.size == 1 && _selectedPlaylistSongs.value.any { it.mediaMetadata.id == songId }) {
                 deletePlaylist(playlistId)
                 return@launch
@@ -159,11 +169,14 @@ class PlaylistScreenViewModel @Inject constructor(
     }
 
     fun deletePlaylist(playlistId: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             _isLoading.value = true
-            playlistRepository.deletePlaylist(playlistId)
-            DataRefreshManager.notifyDataSourcesChanged()
-            _isLoading.value = false
+            try {
+                playlistRepository.deletePlaylist(playlistId)
+                DataRefreshManager.notifyDataSourcesChanged()
+            } finally {
+                _isLoading.value = false
+            }
             loadPlaylists()
         }
     }
@@ -187,19 +200,19 @@ class PlaylistScreenViewModel @Inject constructor(
             if (item.mediaId == song.mediaId) updatedSong else item
         }
 
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             songRepository.setSongRating(songId, rating)
         }
     }
 
     fun downloadSong(song: MediaItem) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             songRepository.downloadSong(song.mediaMetadata, miscSettingsManager.downloadTemplateFlow.first())
         }
     }
 
     fun downloadPlaylist(songs: List<MediaItem>, playlistName: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             songs.forEachIndexed { index, song ->
                 songRepository.downloadSong(
                     song.mediaMetadata,

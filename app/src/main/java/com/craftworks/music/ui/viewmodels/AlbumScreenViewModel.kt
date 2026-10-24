@@ -9,6 +9,7 @@ import com.craftworks.music.data.model.SortOrder
 import com.craftworks.music.data.repository.AlbumRepository
 import com.craftworks.music.managers.DataRefreshManager
 import com.craftworks.music.managers.settings.LocalDataSettingsManager
+import com.craftworks.music.utils.LogFailures
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,7 +45,7 @@ class AlbumScreenViewModel @Inject constructor(
     val showFavoritesOnly: StateFlow<Boolean> = _showFavoritesOnly.asStateFlow()
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             combine(
                 localDataSettingsManager.sortAlbum,
                 localDataSettingsManager.sortAlbumOrder,
@@ -59,7 +60,7 @@ class AlbumScreenViewModel @Inject constructor(
                 }
         }
 
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             DataRefreshManager.dataSourceChangedEvent.collect {
                 getAlbums()
             }
@@ -71,7 +72,7 @@ class AlbumScreenViewModel @Inject constructor(
         getAlbumsJob?.cancel()
         _allAlbums.value = emptyList()
 
-        getAlbumsJob = viewModelScope.launch {
+        getAlbumsJob = viewModelScope.launch(LogFailures) {
             try {
                 _isLoading.value = true
                 _allAlbums.value = albumRepository.getAlbums(
@@ -96,7 +97,7 @@ class AlbumScreenViewModel @Inject constructor(
 
     fun getMoreAlbums(size: Int){
         println("GETTING MORE ALBUMS")
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             try {
                 _isLoading.value = true
                 val albumOffset = _allAlbums.value.size
@@ -122,7 +123,7 @@ class AlbumScreenViewModel @Inject constructor(
             _searchResults.value = emptyList()
             return
         }
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             try {
                 _isLoading.value = true
                 _searchResults.value = albumRepository.getAlbums(
@@ -142,17 +143,17 @@ class AlbumScreenViewModel @Inject constructor(
     }
 
     fun setSorting(newSort: AlbumListSort) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             localDataSettingsManager.saveSortAlbum(newSort)
         }
     }
     fun setOrder(newSortOrder: SortOrder) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             localDataSettingsManager.saveSortAlbumOrder(newSortOrder)
         }
     }
     fun setShowFavoritesOnly(showFavorites: Boolean) {
-        viewModelScope.launch {
+        viewModelScope.launch(LogFailures) {
             localDataSettingsManager.saveShowFavoriteAlbum(showFavorites)
         }
     }
