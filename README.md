@@ -19,7 +19,7 @@ rather than this one. Everything here that is not listed under
 [Changes in this fork](#changes-in-this-fork) below is upstream's code, unmodified.
 
 The changes listed below were written with **Claude Code**, directed and tested by hand
-on the single TV described next. This fork is based on upstream `master` as of 8 October
+on the single TV described next. This fork is based on upstream `master` as of 18 October
 2026, and is kept current by merging upstream in by hand, so it may lag behind.
 
 Upstream is where bugs should be reported, translations contributed (via
@@ -71,8 +71,25 @@ If you are looking for something well-tested, upstream's releases are the safe c
   rather than the first one, and the shuffle and repeat buttons are tinted while on
   instead of only shifting a shade of background.
 - **TV quality of life**: the artist screen loads more artists as you scroll (it used to
-  show only the first page), and the album details screen requests a 600px cover instead
-  of upscaling the 300px card artwork.
+  show only the first page), and the album and artist pages request 600px artwork — sharp
+  at the size they draw it, without fetching the full-size original.
+- **Favourites for songs, albums and artists**, on phone and TV: a heart on Now Playing,
+  on song rows and their menu, and on the album and artist pages. A toggle shows at
+  once and is sent in the background; if the server refuses it, the heart goes back and
+  says so. The same song shows the same heart everywhere without reloading.
+- **Similar songs and artist radio on TV.** Now Playing has a radio button that queues
+  songs similar to the playing one, and the artist page gains a Radio button and a row of
+  similar artists. Offered only by providers that advertise the capability. Navidrome can
+  take 10–20 s to build an artist radio, so the client no longer gives up on it at 10 s,
+  and the button spins while it waits.
+- **A queue view on TV.** A queue button on Now Playing opens the full list, focused on
+  the playing track; OK jumps to a track and Back closes it. When the queue runs out with
+  repeat off, the player returns to Home after five seconds instead of sitting on the
+  last track, unless a key is pressed.
+- **Flag wrong lyrics.** A flag button on Now Playing (beside the lyrics credit on a
+  phone, among the TV player's actions) records the lyrics on screen as wrong, with what
+  they were matched against, for working through later over adb. It shows whether the
+  lyrics showing are already flagged, and a second press takes the flag back.
 - **Lyrics sources can be reordered, and the length tolerance set.** The order breaks
   ties between results of the same quality, and the tolerance — 0 to 30 s, 5 s by
   default — is what a downloaded candidate's length is judged against. Both live under a
@@ -83,11 +100,14 @@ If you are looking for something well-tested, upstream's releases are the safe c
   it back on.
 - **Now Playing credits the source its lyrics came from**, so a source that keeps
   returning the wrong recording can be spotted, and demoted or turned off.
-- **The TV player can hide its lyrics pane**, from a button in the transport row that
-  remembers the choice, and **open the playing track's album or artist** from the same
-  row. The go-to button offers the two screens on top of the player, so Back returns to
-  the music; it dims when there is nothing to open, as on a radio station. It opens with
-  focus on the artist, so one press reaches it.
+- **The TV player's controls are rebalanced.** Shuffle, previous, play/pause, next and
+  repeat sit mirrored round the play button, and the other actions — radio, queue,
+  lyrics, flag and go to — are labelled buttons in a row under the progress bar.
+- **The TV player can hide its lyrics pane**, from a button in that row that remembers
+  the choice, and **open the playing track's album or artist** from the same row. The
+  go-to button offers the two screens on top of the player, so Back returns to the music;
+  it dims when there is nothing to open, as on a radio station. It opens with focus on
+  the artist, so one press reaches it.
 - **Radio stations show their logos.** Navidrome stores an uploaded image per station;
   the cards, Now Playing and Android Auto use it now instead of one placeholder for
   every station. A station without one gets a tile coloured from its name and labelled
@@ -101,6 +121,19 @@ If you are looking for something well-tested, upstream's releases are the safe c
 
 ### Fixes
 
+- **No crash when the server cannot be reached.** A request that failed at startup — the
+  server down, or the TV waking before its Wi-Fi — ended as an uncaught exception and
+  closed the app. The screens now stay empty instead, and reload by themselves when a
+  network comes up.
+- **Shuffle and the queue agree.** The player's own shuffle order ignores where playback
+  starts, so a shuffle could begin partway through it: Next went dim with songs still
+  unplayed, and Play Next landed at a random point. Shuffle buttons now shuffle the list
+  and play it in order, and turning shuffle on from Now Playing starts the order at the
+  current track.
+- **Certificate checks are skipped only where asked.** Upstream's streaming client
+  trusted every certificate and hostname for every server, whatever the
+  *Allow self-signed certs* setting said. Playback now uses the normal checks, and
+  the trust-all client only for a server that has the setting on.
 - **Unplayable tracks no longer stop playback.** A track the server cannot serve, or one
   the decoder rejects, is skipped; playback gives up only after three failures in a row,
   which means the fault is the output or the server rather than the track.
@@ -140,8 +173,12 @@ If you are looking for something well-tested, upstream's releases are the safe c
   Credits and blank lines are dropped, a candidate agreeing with the track on neither its
   name nor its artist is discarded, and a payload of nothing but credits counts as no
   lyrics.
-- **BiniLyrics works again.** The service has moved to lrc.red and the old host answers
-  with a redirect, which the client treated as "no lyrics" — silently, for every track.
+- **Lrc.Red (formerly BiniLyrics) works by name as well as by ISRC.** The service moved
+  to lrc.red and the old host answered with a redirect, which the client treated as "no
+  lyrics" — silently, for every track. Upstream has since moved it to lrc.red too, but
+  looks up only by ISRC; here a track without one, or whose ISRC finds no recording of
+  the right length, is searched by title, artist and album, filtered by duration. The
+  source keeps its old internal name, so upgrading does not reset the lyrics settings.
 - **LRCLIB finds titles that carry a version suffix.** Its search matches the track name
   literally, so "Total Eclipse of the Heart (New radio edit mix)" found nothing even
   though the recording was in the database, and the exact-signature lookup 404s for the
@@ -175,6 +212,9 @@ If you are looking for something well-tested, upstream's releases are the safe c
 
 ### Build
 
+- **A 16:9 TV banner.** The banner was an adaptive icon, a square format the launcher's
+  16:9 slot had to letterbox; it is a plain PNG now, and the same art is the TV launcher
+  icon.
 - **Signing from an external keystore.** Release builds read `storeFile` /
   `storePassword` / `keyAlias` / `keyPassword` from the file named by
   `$CHORA_KEYSTORE_PROPERTIES`, or from `keystore.properties` in the project root, and
@@ -192,10 +232,12 @@ other forks of Chora and porting what they had already worked out. Thanks to all
 | [davisv7/Chora](https://github.com/davisv7/Chora) | Shuffle handling (`7b69d73`), and signing release builds from an external keystore (`c470144`) |
 | [NathanMartinez/Chora](https://github.com/NathanMartinez/Chora) | Confirming playlist deletion on TV ([upstream PR #121](https://github.com/CraftWorksMC/Chora/pull/121)), and rejecting a refused Subsonic login (`b356f2a`) |
 
-As ported, the shuffle fix goes further than either original: `SongHelper.play` /
-`SongHelper.shuffle` now set shuffle mode explicitly at every call site, which also fixes
-the phone album Shuffle never enabling shuffle mode, the TV artist Shuffle picking its
-random index from the wrong list, and a crash on shuffling an empty list.
+As ported, the shuffle fix goes further than either original: every Play and Shuffle
+button goes through `SongHelper.play` / `SongHelper.shuffle`, so Play always turns shuffle
+mode off and Shuffle always shuffles. That also fixed the phone album Shuffle not
+shuffling, the TV artist Shuffle picking its random track from the wrong list, and a crash
+on shuffling an empty list. (Shuffle has since changed to shuffling the list itself, as
+described under Fixes.)
 
 ## Known gaps
 
