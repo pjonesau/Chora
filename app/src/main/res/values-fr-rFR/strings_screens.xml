@@ -8,5 +8,4 @@
     <string name="home_settings">Paramètres</string>
     <string name="artist_details_discography">Discographie</string>
     <string name="album_details_disc">Disque %s</string>
-    <string name="now_playing_lyrics_credit">Lyrics provided by %s</string>
 </resources>

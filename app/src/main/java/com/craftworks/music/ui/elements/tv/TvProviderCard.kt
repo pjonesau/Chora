@@ -51,7 +51,6 @@ import com.craftworks.music.data.providers.media.local.LocalMediaProvider
 import com.craftworks.music.data.providers.media.subsonic.SubsonicMediaProvider
 import com.craftworks.music.managers.DataRefreshManager
 import com.craftworks.music.managers.MediaProviderManager
-import com.craftworks.music.managers.settings.MediaProviderSettingsManager
 
 @Composable
 private fun ProviderItem(

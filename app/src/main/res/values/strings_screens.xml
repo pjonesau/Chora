@@ -38,7 +38,4 @@
 
     // Album Details
     <string name="album_details_disc">Disc %s</string>
-
-    // Lyrics Credits
-    <string name="now_playing_lyrics_credit">Lyrics provided by %s</string>
 </resources>

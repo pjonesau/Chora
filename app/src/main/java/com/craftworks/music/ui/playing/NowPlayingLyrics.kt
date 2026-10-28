@@ -2,11 +2,8 @@ package com.craftworks.music.ui.playing
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -17,7 +14,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -67,7 +63,6 @@ import com.craftworks.music.data.model.providerId
 import com.craftworks.music.data.repository.LyricsState
 import com.craftworks.music.managers.MediaProviderManager
 import com.craftworks.music.managers.settings.AppearanceSettingsManager
-import com.craftworks.music.managers.settings.MediaProviderSettingsManager
 import com.craftworks.music.ui.playing.lyrics.SyncedLyricItem
 import com.craftworks.music.ui.playing.lyrics.WordSyncedLyricItem
 import com.gigamole.composefadingedges.FadingEdgesGravity
