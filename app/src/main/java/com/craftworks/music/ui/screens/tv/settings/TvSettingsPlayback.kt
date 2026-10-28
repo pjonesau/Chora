@@ -20,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.craftworks.music.R
 import com.craftworks.music.managers.settings.PlaybackSettingsManager
 import com.craftworks.music.ui.elements.dialogs.tv.TranscodingBitrateDialog
@@ -35,20 +36,16 @@ fun TvS_PlaybackScreen() {
     var showTranscodingFormatDialog by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
-    val playbackSettingsManager = remember { PlaybackSettingsManager(context) }
-
     val coroutineScope = rememberCoroutineScope()
 
-    val transcodingBitrateWifi by playbackSettingsManager.wifiTranscodingBitrateFlow.collectAsState("")
-    val transcodingBitrateData by playbackSettingsManager.mobileDataTranscodingBitrateFlow.collectAsState("")
-    val transcodingFormat by playbackSettingsManager.transcodingFormatFlow.collectAsState("opus")
+    val transcodingBitrateWifi by PlaybackSettingsManager(context).wifiTranscodingBitrateFlow.collectAsState("")
+    val transcodingBitrateData by PlaybackSettingsManager(context).mobileDataTranscodingBitrateFlow.collectAsState("")
+    val transcodingFormat by PlaybackSettingsManager(context).transcodingFormatFlow.collectAsState("opus")
     val transcodingFormatEnabled by remember {
         derivedStateOf {
             transcodingBitrateData != "No Transcoding" || transcodingBitrateWifi != "No Transcoding"
         }
     }
-
-    val offloadEnabled by playbackSettingsManager.audioOffloadEnabled.collectAsStateWithLifecycle(true)
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -80,6 +77,20 @@ fun TvS_PlaybackScreen() {
                 icon = ImageVector.vectorResource(R.drawable.s_p_transcoding),
                 enabled = transcodingFormatEnabled,
                 onClick = { showTranscodingFormatDialog = true }
+            )
+        }
+
+        item {
+            val settingsManager = remember { PlaybackSettingsManager(context) }
+            val offloadEnabled by settingsManager.audioOffloadEnabled.collectAsStateWithLifecycle(true)
+
+            SettingsSwitchItem(
+                title = stringResource(R.string.playback_audio_offloading),
+                icon = ImageVector.vectorResource(R.drawable.rounded_replace_audio_24),
+                checked = offloadEnabled,
+                onCheckedChange = {
+                    coroutineScope.launch { settingsManager.setAudioOffload(it) }
+                }
             )
         }
 
